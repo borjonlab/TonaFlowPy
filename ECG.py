@@ -20,7 +20,7 @@ class ECG:
         self.HeartRate_X = None
         self.HeartRate_Y = None
         ## Active versioning
-        self.active_version = 'raw'
+        self.Active_Version = 'raw'
 
 
 
@@ -124,6 +124,24 @@ class ECG:
         if method == 'cwt':
             pass
 
+    def splice_ECG(self, test=False):
+        splicelocations = self.SpliceLocations
+        temp_ecg = np.copy(self.Y_Data)
+        if test == True:
+            splicelocations = np.array(([15000, 20000],)) # Place the comma there so that `for in` treats each as a row, regardless of it's length
+            for loc in splicelocations:
+                L = loc[0]
+                R = loc[1]
+                # Find the first heartbeat to the left
+                left_segment = np.where(e.HeartBeats[:15000] == 1)
+                left_beat = left_segment[0][-1]
+                # Find the first heartbeat to the right
+                right_segment = np.where(e.HeartBeats[])
+                right_beat = right_segment[0][0] # Just the first el
+                temp_ecg[splicelocations] = np.nan # nan out the splice locations
+
+    
+    ## Other
     def butter_bandpass(self,lowcut, highcut, fs, order=5):
         nyq = 0.5 * self.SamplingRate
         low = lowcut / nyq
@@ -136,9 +154,9 @@ class ECG:
 
     # Get and Set functions 
     def get_components(self):
-        if self.active_version == 'raw':
+        if self.Active_Version == 'raw':
             return self.X_Data
-        elif self.active_version == 'filtered':
+        elif self.Active_Version == 'filtered':
             return self.X_Data_Filtered
 
 
