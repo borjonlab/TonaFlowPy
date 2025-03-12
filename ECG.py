@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd 
 import argparse
+from matplotlib import pyplot as plt
+from scipy.signal.windows import gaussian as gausswin
+from scipy.signal import butter, lfilter
+from scipy.fft import fft,fftfreq
 
 class ECG:
     def __init__(self,csvPath):
@@ -10,6 +14,13 @@ class ECG:
         ## inits
         self.X_Data_Filtered, self.Y_Data_Filtered = None, None
         self.SpliceLocations = None
+        self.HeartBeats = None
+        self.Thresholds = None
+        # Heart Rate
+        self.HeartRate_X = None
+        self.HeartRate_Y = None
+        ## Active versioning
+        self.active_version = 'raw'
 
 
 
@@ -25,16 +36,20 @@ class ECG:
     
     # Hard Calculations 
 
-    def calculate_heart_rate(self,method='conv'):
-        if method == 'conv':
-            pass
+    def calculate_heart_rate(self,window_size = 10, smoothing_factor = 0.7):
+        fs = self.SamplingRate
+        # Add something here to take care of the spliced version
+        gauss_filter = gausswin(fs*window_size, std=1*fs) #stdev of 1sec (1*fs)
+        gauss_filter = gauss_filter / np.sum(gauss_filter)
+        # Convolve the gaussian window over the binary array of heartbeats
+        self.HeartRate_Y = np.convolve(self.HeartBeats,gauss_filter,'same') * fs * 60
+        self.HeartRate_X = np.arange(0,self.HeartRate_Y.shape[0]/fs,1/fs)
+        
                 
-    def detect_heart_beats(self,method='dynamicThreshold'):
+    def detect_heart_beats(self,method='dynamicThreshold',threshold_percentile = 97.5, threshold_window = 1, merge_window = 20):
         parser = argparse.ArgumentParser('detect_heartbeats')
         if method == 'dynamicThreshold':
-            ###### TEMPORARY DECS
-            PRCT = 97
-            
+            ###### TEMPORARY DECS            
             # t = self.active_ecg.X_Data
             # y = self.active_ecg.Y_Data
             # fs = self.active_ecg.Fs
@@ -46,53 +61,77 @@ class ECG:
 
             ses_len = t[len(t)-1] - t[0] # length of session
             ses_size = len(t) # Size of session in elements
-            len_seg = 1
 
             # Segment into N second windows; whatever user suggests. 
             # Default to 1
-            rows = int(np.floor(ses_len/len_seg))
-            cols = int(fs*len_seg)
+            rows = int(np.floor(ses_len/threshold_window))
+            cols = int(fs*threshold_window)
             Time = np.zeros((rows,cols))
-            for g in range(0,int(np.floor(ses_len/len_seg))+1):
-                det = [i for i in range(int(1+len_seg*(g-1)*fs),int(len_seg*g*fs)+1)]
+            for g in range(0,int(np.floor(ses_len/threshold_window))+1):
+                det = [i for i in range(int(1+threshold_window*(g-1)*fs),int(threshold_window*g*fs)+1)]
                 Time[g-1,:] = det
             
             # Cast time to int64
             Time = np.int64(Time)
             spks = []
-            for g in range(1,Time.shape[0]):
+            thresholds = np.zeros((rows,cols)) # To save the thresholds
+            for g in range(0,Time.shape[0]):
                 seg = y[Time[g,:]]
-                p = np.percentile(seg,PRCT) # This is the value that becomes the threshold for segment `g`
+                p = np.percentile(seg,threshold_percentile) # This is the value that becomes the threshold for segment `g`
                 spks.append(Time[g][np.where(seg>p)]/fs)
+                # Append to the thresholds
+                thresholds[g,:] = p
             # unstack the peaks, because it is nested
             spks = np.hstack(spks)
             mSpks = np.copy(spks) # Make a copy of the array.. bc python name refs lol
             mSpks = np.sort(mSpks)
+
+            # reshape the thresholds
+            thresholds = np.reshape(thresholds,thresholds.shape[0]*thresholds.shape[1])
             
 
             # Now, we look at every single peak, and then find the max and minimum 
             # within a given window. 
-            
             # Create a reference table, with [index, t, y]
             ix = [i for i in range(0,t.shape[0])]
             reftable = np.transpose(np.array([ix,t,y]))
 
-            win = 20 # Window size in elements
+            # Window size in elements
             nspk = []
             nspk2 = []
             for ix in range(0,mSpks.shape[0]):
                 this = reftable[reftable[:,1] == mSpks[ix],:][0]
-                winix = np.array([i for i in range(np.int64(this[0] - (win/2)),
-                                          np.int64(this[0] + (win/2)))])
+                winix = np.array([i for i in range(np.int64(this[0] - (merge_window/2)),
+                                            np.int64(this[0] + (merge_window/2)))])
                 
                 window = reftable[winix[winix>0],:]
                 m = np.max(window[:,2])
                 i = np.argmax(window[:,2])
-                nspk.append()
+                # nspk.append()
+                nspk.append(window[i,1])
+                nspk2.append(window[i,0])
+            # Cast npsk2 to int64
+            nspk2 = np.int64(nspk2)
+            # Create a dummy array for the heart beats
+            dum = np.zeros(int(np.ceil(ses_len*fs)))
+            dum[nspk2] = 1 # Set heartbeats = 1
+            # Assign to self.beats
+            self.HeartBeats = np.copy(dum)
+            self.Thresholds = thresholds
+            self.Thresholds_X = np.arange(0, thresholds.shape[0]/fs, 1/fs)
     
     def filter_ECG(self,method='cwt'):
         if method == 'cwt':
             pass
+
+    def butter_bandpass(self,lowcut, highcut, fs, order=5):
+        nyq = 0.5 * self.SamplingRate
+        low = lowcut / nyq
+        high = highcut / nyq
+        b, a = butter(order, [low, high], btype='band')
+        y = lfilter(b,a,self.Y_Data)
+        return y
+        # return b, a
 
 
     # Get and Set functions 
@@ -103,10 +142,43 @@ class ECG:
             return self.X_Data_Filtered
 
 
+
+
     
 
 
 # Debug and testing 
 
 e = ECG("ex.csv")
-e.detect_heart_beats()
+e.detect_heart_beats(merge_window=50,threshold_percentile=99)
+e.calculate_heart_rate()
+
+xb = e.X_Data[np.where(e.HeartBeats == 1)]
+yb = e.Y_Data[np.where(e.HeartBeats == 1)]
+x = e.X_Data
+y = e.Y_Data
+xthr = e.Thresholds_X
+ythr = e.Thresholds
+
+yFilt = e.butter_bandpass(2,30,1000)
+
+
+f = plt.figure()
+ax1 = plt.subplot(2,1,1)
+plt.plot(xb,yb,marker='.',markersize=8,markerfacecolor='red',linestyle='None')
+plt.plot(x,y)
+plt.plot(xthr,ythr,linestyle='--',color='red')
+plt.grid(True)
+plt.legend(["Heartbeats","ECG","Thresholds"])
+
+plt.subplot(2,1,2, sharex= ax1)
+plt.plot(e.HeartRate_X,e.HeartRate_Y)
+plt.grid(True)
+plt.show()
+
+f2 = plt.figure()
+for i in np.arange(1,4,1):
+    yf = e.butter_bandpass(i,499,1000)
+    plt.plot(yf,alpha = 0.5)
+plt.legend([f"lo={i}Hz" for i in np.arange(1,10,2)])
+plt.show()
