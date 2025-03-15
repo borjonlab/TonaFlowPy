@@ -1,202 +1,248 @@
+import tkinter as tk
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import pandas as pd
 import numpy as np
-import pandas as pd 
-import argparse
-from matplotlib import pyplot as plt
-from scipy.signal.windows import gaussian as gausswin
-from scipy.signal import butter, lfilter
-from scipy.fft import fft,fftfreq
+from tkinter import ttk, filedialog
 
-class ECG:
-    def __init__(self,csvPath):
-        self.X_Data, self.Y_Data = self.read_csv(csvPath)
-        self.read_csv(csvPath)
-        self.SamplingRate = self.estimate_sampling_rate()    
-        ## inits
-        self.X_Data_Filtered, self.Y_Data_Filtered = None, None
-        self.SpliceLocations = None
-        self.HeartBeats = None
-        self.Thresholds = None
-        # Heart Rate
-        self.HeartRate_X = None
-        self.HeartRate_Y = None
-        ## Active versioning
-        self.Active_Version = 'raw'
+class ecg_applicaion:
+    def __init__(self, mast):
+        # Set up the main window and frames.
+        self.m = mast
+        self.m.title("ECG Analysis")
+        self.m.geometry("1200x600")
+        self.topF = tk.Frame(self.m, bg="white", height=20)
+        self.topF.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.m.grid_rowconfigure(0, weight=1)
+        self.lsideF = tk.Frame(self.m, bg="white")
+        self.lsideF.grid(row=1, column=0, sticky="nsew")
+        self.rsideF = tk.Frame(self.m, bg="lightgray")
+        self.rsideF.grid(row=1, column=1, sticky="ns")
+        self.m.grid_rowconfigure(1, weight=1)
+        self.m.grid_columnconfigure(0, weight=1)
+        self.m.grid_columnconfigure(1, weight=0)
 
+        # Variables for  point select.
+        self.selected_index = 0
+        self.data = None
+        self.time_values = None
+        self.ecg_values = None
+        self.ecg_col = None
+        self.selected_marker = None
+        self.tooltip = None
+        self.heart_line = None  # Var for rand linear line on the heart  graph.
+        # Attributes to update
+        self.ax1 = None
+        self.ax2 = None
 
+        # Intializing functions for graphs
+        self.makecontrols()
+        self.dographs()
 
-    # Setup Functions 
-    def estimate_sampling_rate(self):
-        return 1/np.mean(np.diff(self.X_Data))
-    
-    def read_csv(self,filepath):
-        file = pd.read_csv(filepath)
-        x = file.iloc[:,0].to_numpy()
-        y = file.iloc[:,1].to_numpy()
-        return x,y
-    
-    # Hard Calculations 
+        self.m.bind("<Left>", self.on_left)
+        self.m.bind("<Right>", self.on_right)
 
-    def calculate_heart_rate(self,window_size = 10, smoothing_factor = 0.7):
-        fs = self.SamplingRate
-        # Add something here to take care of the spliced version
-        gauss_filter = gausswin(fs*window_size, std=1*fs) #stdev of 1sec (1*fs)
-        gauss_filter = gauss_filter / np.sum(gauss_filter)
-        # Convolve the gaussian window over the binary array of heartbeats
-        self.HeartRate_Y = np.convolve(self.HeartBeats,gauss_filter,'same') * fs * 60
-        self.HeartRate_X = np.arange(0,self.HeartRate_Y.shape[0]/fs,1/fs)
-        
-                
-    def detect_heart_beats(self,method='dynamicThreshold',threshold_percentile = 97.5, threshold_window = 1, merge_window = 20):
-        parser = argparse.ArgumentParser('detect_heartbeats')
-        if method == 'dynamicThreshold':
-            ###### TEMPORARY DECS            
-            # t = self.active_ecg.X_Data
-            # y = self.active_ecg.Y_Data
-            # fs = self.active_ecg.Fs
-            t = self.X_Data
-            y = self.Y_Data
-            fs = self.SamplingRate
+    def dographs(self, data=None):
+        fig, (a1, a2) = plt.subplots(2, 1, figsize=(8, 5))
+        fig.subplots_adjust(hspace=0.7)
+        self.ax1 = a1  # here we are Storing the ECG axis.
+        self.ax2 = a2  # Store the Heart Rate axis.
 
+        # For testing purposes, I used CSV data, similar to what was done in SigSync
+        if data is not None:
+            print("w")
+            for col in data.columns:
+                if col != 'Time':
+                    a1.plot(data['Time'], data[col], label=col)
+            a1.set_title("ECG")
+            a1.legend()
 
+            self.data = data
+            self.time_values = data['Time'].values
+            non_time_cols = [col for col in data.columns if col != 'Time']
+            if non_time_cols:
+                self.ecg_col = non_time_cols[0]
+                self.ecg_values = data[self.ecg_col].values
+            else:
+                self.ecg_col = None
+                self.ecg_values = None
 
-            ses_len = t[len(t)-1] - t[0] # length of session
-            ses_size = len(t) # Size of session in elements
+            if self.selected_index >= len(self.time_values):
+                self.selected_index = 0
 
-            # Segment into N second windows; whatever user suggests. 
-            # Default to 1
-            rows = int(np.floor(ses_len/threshold_window))
-            cols = int(fs*threshold_window)
-            Time = np.zeros((rows,cols))
-            for g in range(0,int(np.floor(ses_len/threshold_window))+1):
-                det = [i for i in range(int(1+threshold_window*(g-1)*fs),int(threshold_window*g*fs)+1)]
-                Time[g-1,:] = det
-            
-            # Cast time to int64
-            Time = np.int64(Time)
-            spks = []
-            thresholds = np.zeros((rows,cols)) # To save the thresholds
-            for g in range(0,Time.shape[0]):
-                seg = y[Time[g,:]]
-                p = np.percentile(seg,threshold_percentile) # This is the value that becomes the threshold for segment `g`
-                spks.append(Time[g][np.where(seg>p)]/fs)
-                # Append to the thresholds
-                thresholds[g,:] = p
-            # unstack the peaks, because it is nested
-            spks = np.hstack(spks)
-            mSpks = np.copy(spks) # Make a copy of the array.. bc python name refs lol
-            mSpks = np.sort(mSpks)
+            # Adding the red marker at the point.
+            x_val = self.time_values[self.selected_index]
+            y_val = self.ecg_values[self.selected_index] if self.ecg_values is not None else 0
+            self.selected_marker, = a1.plot([x_val], [y_val], 'ro', markersize=8)
+            # Adding the text next to the dot// Rounding to the 2nd decimal spot
+            self.tooltip = a1.text(x_val, y_val, f'Time: {x_val:.2f}\nAmp: {y_val:.2f}',
+                                   fontsize=9, color='black', bbox=dict(facecolor='white', alpha=0.7))
+        else:
+            print("WHAT")
+            a1.set_title("ECG")
 
-            # reshape the thresholds
-            thresholds = np.reshape(thresholds,thresholds.shape[0]*thresholds.shape[1])
-            
+        a2.set_title("Heart Rate")
 
-            # Now, we look at every single peak, and then find the max and minimum 
-            # within a given window. 
-            # Create a reference table, with [index, t, y]
-            ix = [i for i in range(0,t.shape[0])]
-            reftable = np.transpose(np.array([ix,t,y]))
+        #  destroying canvas before creating a new one, so we can see new graph
+        if hasattr(self, 'c'):
+            self.c.get_tk_widget().destroy()
 
-            # Window size in elements
-            nspk = []
-            nspk2 = []
-            for ix in range(0,mSpks.shape[0]):
-                this = reftable[reftable[:,1] == mSpks[ix],:][0]
-                winix = np.array([i for i in range(np.int64(this[0] - (merge_window/2)),
-                                            np.int64(this[0] + (merge_window/2)))])
-                
-                window = reftable[winix[winix>0],:]
-                m = np.max(window[:,2])
-                i = np.argmax(window[:,2])
-                # nspk.append()
-                nspk.append(window[i,1])
-                nspk2.append(window[i,0])
-            # Cast npsk2 to int64
-            nspk2 = np.int64(nspk2)
-            # Create a dummy array for the heart beats
-            dum = np.zeros(int(np.ceil(ses_len*fs)))
-            dum[nspk2] = 1 # Set heartbeats = 1
-            # Assign to self.beats
-            self.HeartBeats = np.copy(dum)
-            self.Thresholds = thresholds
-            self.Thresholds_X = np.arange(0, thresholds.shape[0]/fs, 1/fs)
-    
-    def filter_ECG(self,method='cwt'):
-        if method == 'cwt':
-            pass
+        self.c = FigureCanvasTkAgg(fig, master=self.lsideF)
+        self.c.draw()  # New canvas.
+        self.c.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-    def splice_ECG(self, test=False):
-        splicelocations = self.SpliceLocations
-        temp_ecg = np.copy(self.Y_Data)
-        if test == True:
-            splicelocations = np.array(([15000, 20000],)) # Place the comma there so that `for in` treats each as a row, regardless of it's length
-            for loc in splicelocations:
-                L = loc[0]
-                R = loc[1]
-                # Find the first heartbeat to the left
-                left_segment = np.where(e.HeartBeats[:15000] == 1)
-                left_beat = left_segment[0][-1]
-                # Find the first heartbeat to the right
-                right_segment = np.where(e.HeartBeats[])
-                right_beat = right_segment[0][0] # Just the first el
-                temp_ecg[splicelocations] = np.nan # nan out the splice locations
+        # Here are mouse events
+        if data is not None:
+            self.c.mpl_connect("button_press_event", self.on_click)
+            self.c.mpl_connect("motion_notify_event", self.on_drag)
 
-    
-    ## Other
-    def butter_bandpass(self,lowcut, highcut, fs, order=5):
-        nyq = 0.5 * self.SamplingRate
-        low = lowcut / nyq
-        high = highcut / nyq
-        b, a = butter(order, [low, high], btype='band')
-        y = lfilter(b,a,self.Y_Data)
-        return y
-        # return b, a
+    def update_selected_point(self):
+        if self.time_values is not None and self.ecg_values is not None:
+            x_val = self.time_values[self.selected_index]
+            y_val = self.ecg_values[self.selected_index]
+            self.selected_marker.set_data([x_val], [y_val])
+            # Updating the text and position that is presented
+            self.tooltip.set_position((x_val, y_val))
+            self.tooltip.set_text(f'Time: {x_val:.2f}\nAmp: {y_val:.2f}')
+            self.c.draw()
 
+    def on_click(self, event):
+        if event.inaxes is not None and self.time_values is not None:
+            x_click = event.xdata
+            # Find the index where Time is closest to the click position.
+            idx = (np.abs(self.time_values - x_click)).argmin()
+            self.selected_index = idx
+            self.update_selected_point()
+            # Create a random linear line on the Heart Rate graph.
+            self.add_random_heart_line()
 
-    # Get and Set functions 
-    def get_components(self):
-        if self.Active_Version == 'raw':
-            return self.X_Data
-        elif self.Active_Version == 'filtered':
-            return self.X_Data_Filtered
+    def on_drag(self, event):
+        if event.inaxes is not None and event.xdata is not None and event.button is not None:
+            x_drag = event.xdata
+            idx = (np.abs(self.time_values - x_drag)).argmin()
+            self.selected_index = idx
+            self.update_selected_point()
 
+    def on_left(self, event):
+        if self.time_values is not None and self.selected_index > 0:
+            self.selected_index -= 1
+            self.update_selected_point()
 
+    def on_right(self, event):
+        if self.time_values is not None and self.selected_index < len(self.time_values) - 1:
+            self.selected_index += 1
+            self.update_selected_point()
 
+    def add_random_heart_line(self):
+        random_slope = np.random.uniform(-0.5, 0.5)
+        random_intercept = np.random.uniform(50, 150)
+        if self.heart_line is not None:
+            self.heart_line.remove()
+        x_vals = np.linspace(*self.ax2.get_xlim(), num=100)
+        y_vals = random_slope * x_vals + random_intercept
+        self.heart_line, = self.ax2.plot(x_vals, y_vals, color='green', linestyle='-', label='Random Linear')
+        self.ax2.legend()
+        self.c.draw()
 
-    
+    def makecontrols(self):
+        # making UI for the controls
+        r = 0
+        control_sects = [
+            ("Heartbeats", ["Add Heartbeat", "Remove Heartbeat"]),
+            ("Data Removal", ["Toggle Removal Mode", "Draw Removal Interval"])
+        ]
+        for sect_title, button_list in control_sects:
+            sectFrame = ttk.LabelFrame(self.rsideF, text=sect_title)
+            sectFrame.grid(row=r, column=0, sticky="ew", padx=5, pady=5)
+            r += 1
+            for button in button_list:
+                ttk.Button(sectFrame, text=button).pack(fill=tk.X, padx=5, pady=2)
 
+        viewF = ttk.LabelFrame(self.rsideF, text="View")
+        viewF.grid(row=r, column=0, sticky="ew", padx=5, pady=5)
+        r += 1
+        ttk.Label(viewF, text="View Window (s)").pack()
+        ttk.Entry(viewF).pack(fill=tk.X, padx=5)
+        ttk.Label(viewF, text="ECG Y Limits").pack()
+        ttk.Entry(viewF).pack(fill=tk.X, padx=5)
+        ttk.Label(viewF, text="HR Y Limits").pack()
+        ttk.Entry(viewF).pack(fill=tk.X, padx=5)
+        ttk.Checkbutton(viewF, text="Show Raw Signal").pack(anchor="w", padx=5)
+        ttk.Checkbutton(viewF, text="Show Partial Calculation Area").pack(anchor="w", padx=5)
 
-# Debug and testing 
+        upload_btn = ttk.Button(self.rsideF, text="Upload ECG Data", command=self.upload_file)
+        upload_btn.grid(row=r, column=0, sticky="ew", padx=5, pady=5)
+        r += 1
 
-e = ECG("ex.csv")
-e.detect_heart_beats(merge_window=50,threshold_percentile=99)
-e.calculate_heart_rate()
+        info = ttk.LabelFrame(self.rsideF, text="Session Info")
+        info.grid(row=r, column=0, sticky="ew", padx=5, pady=5)
+        r += 1
+        ttk.Label(info, text="Session Length (s): 44.05").pack(pady=2)
+        ttk.Label(info, text="Sampling Rate (Hz): 1000").pack(pady=2)
+        ttk.Label(info, text="Filename:").pack()
+        ttk.Label(info, text="Filepath: /Users/devlab...").pack()
 
-xb = e.X_Data[np.where(e.HeartBeats == 1)]
-yb = e.Y_Data[np.where(e.HeartBeats == 1)]
-x = e.X_Data
-y = e.Y_Data
-xthr = e.Thresholds_X
-ythr = e.Thresholds
+        tab = ttk.LabelFrame(self.rsideF, text="Chart Data")
+        tab.grid(row=0, column=1, rowspan=len(self.rsideF.winfo_children()), sticky="new", padx=10, pady=5)
+        cols = ("Start", "Stop")
+        self.tab = ttk.Treeview(tab, columns=cols, show="headings", height=20)
+        self.tab.heading("Start", text="Start", anchor="w")
+        self.tab.heading("Stop", text="Stop", anchor="w")
+        self.tab.column("Start", width=100, anchor="w")
+        self.tab.column("Stop", width=100, anchor="w")
+        self.tab.pack(side="top", fill=tk.X)
 
-yFilt = e.butter_bandpass(2,30,1000)
+    def upload_file(self):
+        filepath = filedialog.askopenfilename(
+            title="Select ECG CSV file", filetypes=[("CSV Files", "*.csv")]
+        )
+        if filepath:
+            self.load_signal_data(filepath)
+        else:
+            print("No file selected.")
 
+    def load_signal_data(self, what):
+        """Load signal data from CSV and store time and data in variables."""
+        try:
+            df = pd.read_csv(what)
+            column_names = df.columns
+            print("Columns in the file:", df.columns)
 
-f = plt.figure()
-ax1 = plt.subplot(2,1,1)
-plt.plot(xb,yb,marker='.',markersize=8,markerfacecolor='red',linestyle='None')
-plt.plot(x,y)
-plt.plot(xthr,ythr,linestyle='--',color='red')
-plt.grid(True)
-plt.legend(["Heartbeats","ECG","Thresholds"])
+            self.without_time = []
 
-plt.subplot(2,1,2, sharex= ax1)
-plt.plot(e.HeartRate_X,e.HeartRate_Y)
-plt.grid(True)
-plt.show()
+            # Assumign that the first column is the time column.
+            self.signal_time = df[column_names[0]].values
 
-f2 = plt.figure()
-for i in np.arange(1,4,1):
-    yf = e.butter_bandpass(i,499,1000)
-    plt.plot(yf,alpha = 0.5)
-plt.legend([f"lo={i}Hz" for i in np.arange(1,10,2)])
-plt.show()
+            self.signal_data = {}
+
+            for col in column_names:
+                self.signal_data[col] = df[col].values
+
+            for col in column_names:
+                if col != "Time":
+                    self.without_time.append(self.signal_data[col])
+
+            self.signal_data["rest"] = np.transpose(np.array(self.without_time))
+            print("Signal time:", self.signal_time)
+            print("Rest data (transposed):", self.signal_data["rest"])
+
+            print("Calling method")
+            self.nothing()
+        except Exception as e:
+            print("Error loading signal data:", e)
+
+    def nothing(self):
+        """Update the ECG graph with the loaded signal data."""
+        data_dict = {"Time": self.signal_time}
+        for key in self.signal_data:
+            if key not in ["rest"]:
+                if key != "Time":
+                    data_dict[key] = self.signal_data[key]
+        df = pd.DataFrame(data_dict)
+        self.dographs(df)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ecg_applicaion(root)
+    root.mainloop()
+
