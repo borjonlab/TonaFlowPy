@@ -47,7 +47,6 @@ class ECG:
         
                 
     def detect_heart_beats(self,method='dynamicThreshold',threshold_percentile = 97.5, threshold_window = 1, merge_window = 20):
-        parser = argparse.ArgumentParser('detect_heartbeats')
         if method == 'dynamicThreshold':
             ###### TEMPORARY DECS            
             # t = self.active_ecg.X_Data
@@ -136,9 +135,9 @@ class ECG:
                 left_segment = np.where(e.HeartBeats[:15000] == 1)
                 left_beat = left_segment[0][-1]
                 # Find the first heartbeat to the right
-                right_segment = np.where(e.HeartBeats[])
-                right_beat = right_segment[0][0] # Just the first el
-                temp_ecg[splicelocations] = np.nan # nan out the splice locations
+                # right_segment = np.where(e.HeartBeats[])
+                # right_beat = right_segment[0][0] # Just the first el
+                # temp_ecg[splicelocations] = np.nan # nan out the splice locations
 
     
     ## Other
