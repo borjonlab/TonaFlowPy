@@ -1,4 +1,4 @@
-from ECG import ECG
+from ECG_Class import ECG
 
 
 
