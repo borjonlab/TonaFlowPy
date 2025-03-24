@@ -126,15 +126,37 @@ class ECG:
     def splice_ECG(self, test=False):
         splicelocations = self.SpliceLocations
         temp_ecg = np.copy(self.Y_Data)
+        temp_heartbeats = np.copy(self.HeartBeats)
+        
         if test == True:
             splicelocations = np.array(([15000, 20000],)) # Place the comma there so that `for in` treats each as a row, regardless of it's length
             for loc in splicelocations:
                 L = loc[0]
                 R = loc[1]
+
+                # Find the firrst heartbeat to the left of L 
+                for i in range(L,0,-1):
+                    if e.HeartBeats[i] == 1:
+                        left_beat_index = i
+                        break
+                    elif i == 0:
+                        left_beat_index = -1 # negative indicates no index found
+                # Now the right
+                for i in range(R,len(e.HeartBeats)-1,1):
+                    if e.HeartBeats[i] == 1:
+                        right_beat_index = i
+                        break
+                    elif i == len(e.HeartBeats)-1:
+                        left_beat_index = -1
+                
+                temp_heartbeats[left_beat_index:right_beat_index] = np.nan
+
                 # Find the first heartbeat to the left
-                left_segment = np.where(e.HeartBeats[:15000] == 1)
-                left_beat = left_segment[0][-1]
-                # Find the first heartbeat to the right
+                # left_segment = np.where(e.HeartBeats[:L] == 1)
+                # left_beat = left_segment[0][-1]
+                # # Find the first heartbeat to the right
+                # right_segment = np.where(e.HeartBeats[R:]==1)
+                # right_beat = right_segment[0][0]
                 # right_segment = np.where(e.HeartBeats[])
                 # right_beat = right_segment[0][0] # Just the first el
                 # temp_ecg[splicelocations] = np.nan # nan out the splice locations
@@ -169,6 +191,7 @@ class ECG:
 e = ECG("ex.csv")
 e.detect_heart_beats(merge_window=50,threshold_percentile=99)
 e.calculate_heart_rate()
+e.splice_ECG(test = True)
 
 xb = e.X_Data[np.where(e.HeartBeats == 1)]
 yb = e.Y_Data[np.where(e.HeartBeats == 1)]
