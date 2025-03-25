@@ -19,6 +19,7 @@ class ECG:
         # Heart Rate
         self.HeartRate_X = None
         self.HeartRate_Y = None
+        self.is_spliced = False
         ## Active versioning
         self.Active_Version = 'raw'
 
@@ -150,6 +151,12 @@ class ECG:
                         left_beat_index = -1
                 
                 temp_heartbeats[left_beat_index:right_beat_index] = np.nan
+
+                self.is_spliced = True
+                # Recalculate heart rate with updated beats 
+                self.calculate_heart_rate()
+                
+
 
                 # Find the first heartbeat to the left
                 # left_segment = np.where(e.HeartBeats[:L] == 1)
