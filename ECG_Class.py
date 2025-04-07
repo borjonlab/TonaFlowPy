@@ -15,11 +15,11 @@ class ECG:
         self.X_Data_Filtered, self.Y_Data_Filtered = None, None
         self.SpliceLocations = None
         self.HeartBeats = None
+        self.HeartBeats_Spliced = None
         self.Thresholds = None
         # Heart Rate
         self.HeartRate_X = None
         self.HeartRate_Y = None
-        self.is_spliced = False
         ## Active versioning
         self.Active_Version = 'raw'
 
@@ -37,14 +37,36 @@ class ECG:
     
     # Hard Calculations 
 
-    def calculate_heart_rate(self,window_size = 10, smoothing_factor = 0.7):
-        fs = self.SamplingRate
-        # Add something here to take care of the spliced version
-        gauss_filter = gausswin(fs*window_size, std=1*fs) #stdev of 1sec (1*fs)
-        gauss_filter = gauss_filter / np.sum(gauss_filter)
-        # Convolve the gaussian window over the binary array of heartbeats
-        self.HeartRate_Y = np.convolve(self.HeartBeats,gauss_filter,'same') * fs * 60
-        self.HeartRate_X = np.arange(0,self.HeartRate_Y.shape[0]/fs,1/fs)
+    def calculate_heart_rate(self,window_size = 10):
+        # Has the signal been spliced yet? If so, we need to take out the NaNs, then calculate the heart rate, then reintroduce the Nans
+        if self.Active_Version == 'spliced':
+            hb = np.copy(self.HeartBeats_Spliced)
+            # Remove the nans
+            ix = np.where(np.isnan(hb))
+            hb = np.delete(hb,ix)
+
+            fs = self.SamplingRate
+            # Add something here to take care of the spliced version
+            gauss_filter = gausswin(fs*window_size, std=1*fs) #stdev of 1sec (1*fs)
+            gauss_filter = gauss_filter / np.sum(gauss_filter)
+            # Convolve the gaussian window over the binary array of heartbeats
+            self.HeartRate_Y = np.convolve(hb,gauss_filter,'same') * fs * 60
+            # Reintroduce the NaNs
+            for loc in self.SpliceLocations:
+                # nanPad = np.nan((1,loc[1]-loc[0]))
+                nanpad = np.empty(loc[1]-loc[0])
+                nanpad[:] = np.nan # fill with nans
+                self.HeartRate_Y = np.insert(self.HeartRate_Y,loc[0],nanpad)
+            self.HeartRate_X = np.arange(0,self.HeartRate_Y.shape[0]/fs,1/fs)
+            
+        else:
+            fs = self.SamplingRate
+            # Add something here to take care of the spliced version
+            gauss_filter = gausswin(fs*window_size, std=1*fs) #stdev of 1sec (1*fs)
+            gauss_filter = gauss_filter / np.sum(gauss_filter)
+            # Convolve the gaussian window over the binary array of heartbeats
+            self.HeartRate_Y = np.convolve(self.HeartBeats,gauss_filter,'same') * fs * 60
+            self.HeartRate_X = np.arange(0,self.HeartRate_Y.shape[0]/fs,1/fs)
         
                 
     def detect_heart_beats(self,method='dynamicThreshold',threshold_percentile = 97.5, threshold_window = 1, merge_window = 20):
@@ -130,8 +152,8 @@ class ECG:
         temp_heartbeats = np.copy(self.HeartBeats)
         
         if test == True:
-            splicelocations = np.array(([15000, 20000],)) # Place the comma there so that `for in` treats each as a row, regardless of it's length
-            for loc in splicelocations:
+            # self.SpliceLocations = np.array(([15000, 20000],)) # Place the comma there so that `for in` treats each as a row, regardless of it's length
+            for loc in self.SpliceLocations:
                 L = loc[0]
                 R = loc[1]
 
@@ -151,12 +173,8 @@ class ECG:
                         left_beat_index = -1
                 
                 temp_heartbeats[left_beat_index:right_beat_index] = np.nan
-
-                self.is_spliced = True
-                # Recalculate heart rate with updated beats 
-                self.calculate_heart_rate()
-                
-
+                self.Active_Version = 'spliced'
+                self.HeartBeats_Spliced = temp_heartbeats
 
                 # Find the first heartbeat to the left
                 # left_segment = np.where(e.HeartBeats[:L] == 1)
@@ -197,8 +215,10 @@ class ECG:
 
 e = ECG("ex.csv")
 e.detect_heart_beats(merge_window=50,threshold_percentile=99)
-e.calculate_heart_rate()
+e.SpliceLocations=[[5000,10000],[15000,20000]]
 e.splice_ECG(test = True)
+e.calculate_heart_rate()
+
 
 xb = e.X_Data[np.where(e.HeartBeats == 1)]
 yb = e.Y_Data[np.where(e.HeartBeats == 1)]
