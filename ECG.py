@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from tkinter import ttk, filedialog
 
+
 class ecg_applicaion:
     def __init__(self, mast):
         # Set up the main window and frames.
@@ -22,7 +23,7 @@ class ecg_applicaion:
         self.m.grid_columnconfigure(0, weight=1)
         self.m.grid_columnconfigure(1, weight=0)
 
-        # Variables for  point select.
+        # Variables for point select.
         self.selected_index = 0
         self.data = None
         self.time_values = None
@@ -31,9 +32,15 @@ class ecg_applicaion:
         self.selected_marker = None
         self.tooltip = None
         self.heart_line = None  # Var for rand linear line on the heart  graph.
-        # Attributes to update
-        self.ax1 = None
-        self.ax2 = None
+        self.rect = None
+        self.rect_start = None
+        self.rect_end = None
+
+        self.rects = []
+        self._drawing = None
+        self._dragging = None
+
+
 
         # Intializing functions for graphs
         self.makecontrols()
@@ -50,7 +57,6 @@ class ecg_applicaion:
 
         # For testing purposes, I used CSV data, similar to what was done in SigSync
         if data is not None:
-            print("w")
             for col in data.columns:
                 if col != 'Time':
                     a1.plot(data['Time'], data[col], label=col)
@@ -78,12 +84,10 @@ class ecg_applicaion:
             self.tooltip = a1.text(x_val, y_val, f'Time: {x_val:.2f}\nAmp: {y_val:.2f}',
                                    fontsize=9, color='black', bbox=dict(facecolor='white', alpha=0.7))
         else:
-            print("WHAT")
             a1.set_title("ECG")
 
         a2.set_title("Heart Rate")
 
-        #  destroying canvas before creating a new one, so we can see new graph
         if hasattr(self, 'c'):
             self.c.get_tk_widget().destroy()
 
@@ -91,10 +95,192 @@ class ecg_applicaion:
         self.c.draw()  # New canvas.
         self.c.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
+        self.c.mpl_connect("pick_event", self.on_pick)
+
         # Here are mouse events
         if data is not None:
             self.c.mpl_connect("button_press_event", self.on_click)
             self.c.mpl_connect("motion_notify_event", self.on_drag)
+            self.c.mpl_connect("button_press_event", self.on_press)
+            self.c.mpl_connect("motion_notify_event", self.on_motion)
+            self.c.mpl_connect("button_release_event", self.on_release)
+
+    def on_pick(self, event):
+        artist = event.artist
+        for r in list(self.rects):
+            if r['close'] is artist:
+                r['patch'].remove()
+                r['close'].remove()
+                self.rects.remove(r)
+                self.c.draw()
+                return
+
+    def on_press(self, event):
+        if event.inaxes is not self.ax1:
+            return
+        if event.button == 3:
+            self._drawing = (event.xdata, event.ydata)
+            return
+        # left‑click check for ×
+        if event.button == 1:
+            for r in list(self.rects):
+                tx, ty = r['close'].get_position()
+                xh = np.ptp(self.ax1.get_xlim())*0.02
+                yh = np.ptp(self.ax1.get_ylim())*0.05
+                if abs(event.xdata-tx)<xh and abs(event.ydata-ty)<yh:
+                    r['patch'].remove()
+                    r['close'].remove()
+                    self.rects.remove(r)
+                    self.c.draw()
+                    return
+            for r in self.rects:
+                x0,y0 = r['patch'].get_xy()
+                w,h  = r['patch'].get_width(), r['patch'].get_height()
+                if x0<=event.xdata<=x0+w and y0<=event.ydata<=y0+h:
+                    self._dragging = (r, event.xdata, event.ydata, x0, y0)
+                    return
+
+    def on_motion(self, event):
+        if event.inaxes is not self.ax1:
+            return
+        if self._drawing:
+            x0,y0 = self._drawing
+            dx, dy = event.xdata-x0, event.ydata-y0
+            if hasattr(self, '_temp'):
+                self._temp.remove()
+            self._temp = plt.Rectangle((x0,y0), dx, dy,
+                                       edgecolor='black', facecolor='none')
+            self.ax1.add_patch(self._temp)
+            self.c.draw()
+        # dragging
+        elif self._dragging:
+            r, px, py, x0, y0 = self._dragging
+            dx, dy = event.xdata - px, event.ydata - py
+
+            new_x, new_y = x0 + dx, y0 + dy
+            r['patch'].set_xy((new_x, new_y))
+
+            w, h = r['patch'].get_width(), r['patch'].get_height()
+            cx, cy = new_x + w, new_y + h
+            r['close'].set_position((cx, cy))
+
+            #  indices
+            idxs = np.where((self.time_values >= new_x) &
+                            (self.time_values <= new_x + w))[0]
+            r['start'] = idxs.min() if idxs.size else None
+            r['end'] = idxs.max() if idxs.size else None
+            print(f"Covers indices {r['start']} to {r['end']}")
+            self.c.draw()
+
+    def on_release(self, event):
+        if event.inaxes is not self.ax1:
+            return
+        if event.button == 3 and self._drawing:
+            x0, y0 = self._drawing
+            x1, y1 = event.xdata, event.ydata
+            xmin, xmax = sorted([x0, x1])
+            ymin, ymax = sorted([y0, y1])
+            idxs = np.where((self.time_values >= xmin) & (self.time_values <= xmax))[0]
+            start = idxs.min() if idxs.size else None
+            end = idxs.max() if idxs.size else None
+
+            patch = plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
+                                  edgecolor='black', facecolor='blue',alpha=0.3)
+            self.ax1.add_patch(patch)  
+
+            close_x = xmin + (xmax - xmin)
+            close_y = ymin + (ymax - ymin) + 1
+
+            close = self.ax1.text(
+                close_x, close_y, "×",
+                color='black', fontsize=5, weight='bold',
+                ha='right', va='top',
+                bbox=dict(
+                    boxstyle="circle,pad=0.2",
+                    facecolor="white",
+                    edgecolor="gray",
+                    linewidth=1
+                ),
+            picker = True
+            )
+
+            self.rects.append({'patch': patch, 'close': close, 'start': start, 'end': end})
+
+            if hasattr(self, '_temp'):
+                self._temp.remove()
+                del self._temp
+
+            self._drawing = None
+            print(f"Rectangle covers indices {start} to {end}")
+            self.c.draw()
+
+        if event.button == 1 and self._dragging:
+            self._dragging = None
+
+    def on_click(self, event):
+        if event.inaxes is not None:
+            if self.rect is None:
+                self.rect_start = (event.xdata, event.ydata)
+                self.rect = self.ax1.add_patch(
+                    plt.Rectangle(self.rect_start, 0, 0, linewidth=1, edgecolor='r', facecolor='none'))
+            else:
+                self.rect_end = (event.xdata, event.ydata)
+                self.update_rectangle()
+                self.c.draw()
+
+    def on_drag(self, event):
+        if self.rect is not None and event.inaxes is not None:
+            self.rect_end = (event.xdata, event.ydata)
+            self.update_rectangle()
+            self.c.draw()
+
+    def update_rectangle(self):
+        if self.rect_start is not None and self.rect_end is not None:
+            x1, y1 = self.rect_start
+            x2, y2 = self.rect_end
+            width = x2 - x1
+            height = y2 - y1
+            self.rect.set_width(width)
+            self.rect.set_height(height)
+            self.rect.set_xy((min(x1, x2), min(y1, y2)))
+
+    def makecontrols(self):
+        # making UI for the controls
+        r = 0
+        control_sects = [
+            ("Heartbeats", ["Add Heartbeat", "Remove Heartbeat"]),
+            ("Data Removal", ["Toggle Removal Mode", "Draw Removal Interval"]),
+            ("Rectangle Controls", ["Delete Rectangle"])
+        ]
+        for sect_title, button_list in control_sects:
+            sectFrame = ttk.LabelFrame(self.rsideF, text=sect_title)
+            sectFrame.grid(row=r, column=0, sticky="ew", padx=5, pady=5)
+            r += 1
+            for button in button_list:
+                ttk.Button(sectFrame, text=button,
+                           command=self.delete_rectangle if button == "Delete Rectangle" else None).pack(fill=tk.X,
+                                                                                                         padx=5, pady=2)
+
+        # Add more UI elements if needed...
+
+    def delete_rectangle(self):
+        """Delete the current rectangle."""
+        if self.rect is not None:
+            self.rect.remove()
+            self.rect = None
+            self.rect_start = None
+            self.rect_end = None
+            self.c.draw()
+
+    def on_left(self, event):
+        if self.time_values is not None and self.selected_index > 0:
+            self.selected_index -= 1
+            self.update_selected_point()
+
+    def on_right(self, event):
+        if self.time_values is not None and self.selected_index < len(self.time_values) - 1:
+            self.selected_index += 1
+            self.update_selected_point()
 
     def update_selected_point(self):
         if self.time_values is not None and self.ecg_values is not None:
@@ -143,6 +329,8 @@ class ecg_applicaion:
         self.heart_line, = self.ax2.plot(x_vals, y_vals, color='green', linestyle='-', label='Random Linear')
         self.ax2.legend()
         self.c.draw()
+
+
 
     def makecontrols(self):
         # making UI for the controls
@@ -210,7 +398,7 @@ class ecg_applicaion:
 
             self.without_time = []
 
-            # Assumign that the first column is the time column.
+            # Assume the first column is the time column.
             self.signal_time = df[column_names[0]].values
 
             self.signal_data = {}
@@ -240,6 +428,12 @@ class ecg_applicaion:
                     data_dict[key] = self.signal_data[key]
         df = pd.DataFrame(data_dict)
         self.dographs(df)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ecg_applicaion(root)
+    root.mainloop()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
