@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd 
 import argparse
 from matplotlib import pyplot as plt
+from matplotlib import patches
 from scipy.signal.windows import gaussian as gausswin
 from scipy.signal import butter, lfilter
 from scipy.fft import fft,fftfreq
@@ -13,7 +14,7 @@ class ECG:
         self.SamplingRate = self.estimate_sampling_rate()    
         ## inits
         self.X_Data_Filtered, self.Y_Data_Filtered = None, None
-        self.SpliceLocations = None
+        self.SpliceLocations = []
         self.HeartBeats = None
         self.HeartBeats_Spliced = None
         self.Thresholds = None
@@ -146,18 +147,19 @@ class ECG:
         if method == 'cwt':
             pass
 
-    def splice_ECG(self, test=False):
-        splicelocations = self.SpliceLocations
+    def splice_ECG(self,approximate_locations, test=False):
         temp_ecg = np.copy(self.Y_Data)
         temp_heartbeats = np.copy(self.HeartBeats)
         
         if test == True:
             # self.SpliceLocations = np.array(([15000, 20000],)) # Place the comma there so that `for in` treats each as a row, regardless of it's length
-            for loc in self.SpliceLocations:
+            for loc in approximate_locations:
                 L = loc[0]
                 R = loc[1]
 
                 # Find the firrst heartbeat to the left of L 
+                if L <= 0:
+                    left_beat_index = 0
                 for i in range(L,0,-1):
                     if e.HeartBeats[i] == 1:
                         left_beat_index = i
@@ -165,14 +167,17 @@ class ECG:
                     elif i == 0:
                         left_beat_index = -1 # negative indicates no index found
                 # Now the right
+                if R >= len(e.HeartBeats)-1:
+                    right_beat_index = len(e.HeartBeats)
                 for i in range(R,len(e.HeartBeats)-1,1):
                     if e.HeartBeats[i] == 1:
                         right_beat_index = i
                         break
                     elif i == len(e.HeartBeats)-1:
-                        left_beat_index = -1
+                        right_beat_index = -1
                 
                 temp_heartbeats[left_beat_index:right_beat_index] = np.nan
+                self.SpliceLocations.append([left_beat_index,right_beat_index])
                 self.Active_Version = 'spliced'
                 self.HeartBeats_Spliced = temp_heartbeats
 
@@ -215,9 +220,10 @@ class ECG:
 
 e = ECG("ex.csv")
 e.detect_heart_beats(merge_window=50,threshold_percentile=99)
-e.SpliceLocations=[[5000,10000],[15000,20000]]
-e.splice_ECG(test = True)
+approx_locations =[[0,10000],[40000,220000]]
+e.splice_ECG(test = True,approximate_locations=approx_locations)
 e.calculate_heart_rate()
+
 
 
 xb = e.X_Data[np.where(e.HeartBeats == 1)]
@@ -236,7 +242,18 @@ plt.plot(xb,yb,marker='.',markersize=8,markerfacecolor='red',linestyle='None')
 plt.plot(x,y)
 plt.plot(xthr,ythr,linestyle='--',color='red')
 plt.grid(True)
-plt.legend(["Heartbeats","ECG","Thresholds"])
+plt.legend(["Heartbeats","ECG","Thresholds","Removed Data"])
+
+for loc in e.SpliceLocations:
+    x1 = loc[0] / e.SamplingRate
+    x2 = loc[1] / e. SamplingRate
+    w = x2-x1
+    h = np.max(e.Y_Data)
+    r = patches.Rectangle((x1,np.min(e.Y_Data)),w,h - np.min(e.Y_Data),alpha=.5)
+    ax1.add_patch(r)
+# patches.Rectangle((e.SpliceLocations[0][0],e.SpliceLocations[0][1]),5,5)
+
+
 
 plt.subplot(2,1,2, sharex= ax1)
 plt.plot(e.HeartRate_X,e.HeartRate_Y)
