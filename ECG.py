@@ -4,10 +4,20 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import pandas as pd
 import numpy as np
 from tkinter import ttk, filedialog
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+from scipy.signal.windows import gaussian as gausswin
+from scipy.signal import butter, lfilter
+from scipy.fft import fft,fftfreq
+
+import ECG_Mod
+from ECG_Mod import ECGProcessor
+
+
+
 
 
 class ecg_applicaion:
-    def __init__(self, mast):
+    def __init__(self, mast, csvPath=None):
         # Set up the main window and frames.
         self.m = mast
         self.m.title("ECG Analysis")
@@ -22,6 +32,33 @@ class ecg_applicaion:
         self.m.grid_rowconfigure(1, weight=1)
         self.m.grid_columnconfigure(0, weight=1)
         self.m.grid_columnconfigure(1, weight=0)
+
+        self.beat_markers = []
+        self.th_lines      = []
+
+        self.X_Data = None
+        self.Y_Data = None
+        self.SamplingRate = None
+        self.data = None
+
+        if csvPath:
+            x, y = self.read_csv(csvPath)
+            self.X_Data, self.Y_Data = x, y
+            self.SamplingRate = self.estimate_sampling_rate()
+
+        self.SpliceLocations = []
+        self.HeartBeats = None
+        self.HeartBeats_Spliced = None
+        self.Thresholds = None
+
+        self.HeartRate_X = None
+        self.HeartRate_Y = None
+
+        self.Active_Version = 'raw'
+
+
+
+
 
         # Variables for point select.
         self.selected_index = 0
@@ -48,6 +85,41 @@ class ecg_applicaion:
 
         self.m.bind("<Left>", self.on_left)
         self.m.bind("<Right>", self.on_right)
+        self.create_menu()
+
+    def create_menu(self):
+        menubar = tk.Menu(self.m)
+        self.m.config(menu=menubar)
+
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Load ECG...", command=self.load_ecg)
+
+    def load_ecg(self):
+        filepath = filedialog.askopenfilename(
+            title="Select ECG CSV file", filetypes=[("CSV Files", "*.csv")]
+        )
+        if filepath:
+            self.read_csv(filepath)
+            self.load_signal_data(filepath)
+            self.dographs(self.data)
+
+
+    def read_csv(self,filepath):
+        file = pd.read_csv(filepath)
+
+        x = file.iloc[:,0].to_numpy()
+        y = file.iloc[:,1].to_numpy()
+
+        self.X_Data, self.Y_Data = x, y
+        self.SamplingRate = self.estimate_sampling_rate()
+
+        return x,y
+
+    def estimate_sampling_rate(self):
+        print(1/np.mean(np.diff(self.X_Data)))
+        self.fs = 1/np.mean(np.diff(self.X_Data))
+        return 1/np.mean(np.diff(self.X_Data))
 
     def dographs(self, data=None):
         fig, (a1, a2) = plt.subplots(2, 1, figsize=(8, 5))
@@ -55,11 +127,20 @@ class ecg_applicaion:
         self.ax1 = a1  # here we are Storing the ECG axis.
         self.ax2 = a2  # Store the Heart Rate axis.
 
+
+
         # For testing purposes, I used CSV data, similar to what was done in SigSync
         if data is not None:
-            for col in data.columns:
-                if col != 'Time':
-                    a1.plot(data['Time'], data[col], label=col)
+            # Automatically assume the first column is time
+            time_col = data.columns[0]
+            self.time_values = data[time_col].values
+
+            # Use all other columns as ECG channels
+            non_time_cols = data.columns[1:]
+            for col in non_time_cols:
+                a1.plot(self.time_values, data[col], label=col)
+
+
             a1.set_title("ECG")
             a1.legend()
 
@@ -92,7 +173,12 @@ class ecg_applicaion:
             self.c.get_tk_widget().destroy()
 
         self.c = FigureCanvasTkAgg(fig, master=self.lsideF)
-        self.c.draw()  # New canvas.
+
+        self.toolbar = NavigationToolbar2Tk(self.c, self.lsideF)
+        self.toolbar.update()
+        self.toolbar.pack(side=tk.TOP, fill=tk.X)
+
+        self.c.draw()
         self.c.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
         self.c.mpl_connect("pick_event", self.on_pick)
@@ -121,7 +207,6 @@ class ecg_applicaion:
         if event.button == 3:
             self._drawing = (event.xdata, event.ydata)
             return
-        # left‑click check for ×
         if event.button == 1:
             for r in list(self.rects):
                 tx, ty = r['close'].get_position()
@@ -186,7 +271,7 @@ class ecg_applicaion:
 
             patch = plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
                                   edgecolor='black', facecolor='blue',alpha=0.3)
-            self.ax1.add_patch(patch)  
+            self.ax1.add_patch(patch)
 
             close_x = xmin + (xmax - xmin)
             close_y = ymin + (ymax - ymin) + 1
@@ -250,7 +335,9 @@ class ecg_applicaion:
         control_sects = [
             ("Heartbeats", ["Add Heartbeat", "Remove Heartbeat"]),
             ("Data Removal", ["Toggle Removal Mode", "Draw Removal Interval"]),
-            ("Rectangle Controls", ["Delete Rectangle"])
+            ("Rectangle Controls", ["Delete Rectangle"]),
+            ("Windows", ["Open Beat Detector"])
+
         ]
         for sect_title, button_list in control_sects:
             sectFrame = ttk.LabelFrame(self.rsideF, text=sect_title)
@@ -380,17 +467,110 @@ class ecg_applicaion:
         self.tab.column("Stop", width=100, anchor="w")
         self.tab.pack(side="top", fill=tk.X)
 
+        # just before the final return of makecontrols():
+        ttk.Button(self.rsideF,
+                   text="Beat Detection",
+                   command=self.open_beat_window)\
+            .grid(row=r, column=0, sticky="ew", padx=5, pady=5)
+        r += 1
+
+    def open_beat_window(self):
+        if self.data is None:
+            tk.messagebox.showwarning("No Data", "Please upload ECG data first.")
+            return
+
+        win = tk.Toplevel(self.m)
+        win.title("Beat Detection Settings")
+
+        frm = ttk.Frame(win, padding=10)
+        frm.pack(side="left", fill="y")
+
+        ttk.Label(frm, text="Threshold Window (sec):").grid(row=0, column=0, sticky="w")
+        self.tw_var = tk.DoubleVar(value=1.0)
+        ttk.Entry(frm, textvariable=self.tw_var, width=8).grid(row=0, column=1)
+
+        ttk.Label(frm, text="Threshold Percentile:").grid(row=1, column=0, sticky="w")
+        self.tp_var = tk.DoubleVar(value=97.5)
+        ttk.Entry(frm, textvariable=self.tp_var, width=8).grid(row=1, column=1)
+
+        self.abs_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(frm, text="Use Absolute Value", variable=self.abs_var) \
+            .grid(row=2, column=0, columnspan=2, pady=5)
+
+        self.conv_var = tk.IntVar(value=10)
+        hrFrm = ttk.LabelFrame(frm, text="Heart Rate Calculation Settings…")
+        hrFrm.grid(row=3, column=0, columnspan=2, sticky="ew", pady=5)
+        ttk.Label(hrFrm, text="Convolution Window Size").grid(row=0, column=0, sticky="w")
+        ttk.Entry(hrFrm, textvariable=self.conv_var, width=8).grid(row=0, column=1)
+
+        self.psize_var = tk.DoubleVar(value=1.0)
+        prevFrm = ttk.LabelFrame(frm, text="Preview Settings…")
+        prevFrm.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+        ttk.Label(prevFrm, text="Preview Size (Seconds)").grid(row=0, column=0, sticky="w")
+        ttk.Entry(prevFrm, textvariable=self.psize_var, width=8).grid(row=0, column=1)
+
+        btns = ttk.Frame(frm)
+        btns.grid(row=5, column=0, columnspan=2, pady=(10, 0))
+        ttk.Button(btns, text="Run", command=self.detect_beats).pack(side="left", padx=5)
+        ttk.Button(btns, text="Cancel", command=win.destroy).pack(side="left")
+
+        plot_frame = tk.Frame(win, bg="white")
+        plot_frame.pack(side="left", fill="both", expand=True)
+
+        figp, axp = plt.subplots(figsize=(6, 3))
+        axp.set_facecolor("white")
+
+        # Create a second axis for heart rate
+        fig_hr, ax_hr = plt.subplots(figsize=(6, 3))
+        ax_hr.set_facecolor("white")
+
+        t_col = self.data.columns[0]
+        t = self.data[t_col].values
+        for lead in self.data.columns[1:]:
+            axp.plot(t, self.data[lead].values, label=lead)
+
+        axp.set_title("ECG Preview")
+        axp.set_xlabel("Time (s)")
+        axp.set_ylabel("Amplitude")
+        axp.legend(loc="upper right")
+
+        canvasp = FigureCanvasTkAgg(figp, master=plot_frame)
+        canvasp.draw()
+        canvasp.get_tk_widget().pack(fill="both", expand=True)
+
+        self.beat_win = win
+        self.beat_preview_ax = axp
+        self.heart_rate_ax = ax_hr  # Store the heart rate axis
+
+        self.beat_preview_fig = figp
+        self.beat_preview_cv = canvasp
+
+
+
+    def detect_beats(self):
+        tw = self.tw_var.get()
+        tp = self.tp_var.get()
+
+        self.processor = ECGProcessor(self.X_Data, self.Y_Data, self.fs)
+
+        ECGProcessor.plot_full_analysis_gui(self.beat_preview_ax, self.heart_rate_ax, self.processor)
+
+        # Redraw canvas
+        self.beat_preview_cv.draw()
+        self.beat_preview_ax.legend(loc='upper right')
+        self.beat_preview_cv.draw()
+
     def upload_file(self):
         filepath = filedialog.askopenfilename(
             title="Select ECG CSV file", filetypes=[("CSV Files", "*.csv")]
         )
         if filepath:
+            self.read_csv(filepath)
             self.load_signal_data(filepath)
         else:
             print("No file selected.")
 
     def load_signal_data(self, what):
-        """Load signal data from CSV and store time and data in variables."""
         try:
             df = pd.read_csv(what)
             column_names = df.columns
@@ -412,7 +592,7 @@ class ecg_applicaion:
 
             self.signal_data["rest"] = np.transpose(np.array(self.without_time))
             print("Signal time:", self.signal_time)
-            print("Rest data (transposed):", self.signal_data["rest"])
+            print("Rest data :", self.signal_data["rest"])
 
             print("Calling method")
             self.nothing()
@@ -433,6 +613,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = ecg_applicaion(root)
     root.mainloop()
+
 
 
 if __name__ == "__main__":
