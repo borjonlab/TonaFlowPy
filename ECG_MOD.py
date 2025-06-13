@@ -23,13 +23,16 @@ class ECGProcessor:
         self.HeartRate_Y = None
         self.HeartRate_X = None
 
-    def plot_full_analysis_gui(ax1, ax2, processor):
-
+    def plot_full_analysis_gui(ax1, ax2, processor, threshold_percentile, threshold_window):
 
         ax1.clear()
         ax2.clear()
 
-        processor.detect_heart_beats(merge_window=50, threshold_percentile=99)
+        processor.detect_heart_beats(
+            merge_window=50,
+            threshold_percentile=threshold_percentile,
+            threshold_window=threshold_window
+        )
         processor.splice_ECG(test=True, approximate_locations=[[0, 10000], [40000, 220000]])
         processor.calculate_heart_rate()
 
@@ -64,7 +67,8 @@ class ECGProcessor:
         ax2.set_ylabel("BPM")
         ax2.grid(True)
 
-    def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=97.5, threshold_window=1, merge_window=20):
+    def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=None, threshold_window=None,
+                           merge_window=20):
         if method == 'dynamicThreshold':
             t = self.X_Data
             y = self.Y_Data
@@ -186,4 +190,3 @@ class ECGProcessor:
             return self.X_Data
         elif self.Active_Version == 'filtered':
             return self.X_Data_Filtered
-
