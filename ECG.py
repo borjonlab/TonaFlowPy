@@ -1,13 +1,16 @@
 import tkinter as tk
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import ttk, filedialog
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from scipy.signal.windows import gaussian as gausswin
 from scipy.signal import butter, lfilter
 from scipy.fft import fft,fftfreq
+from matplotlib.animation import FuncAnimation
+
 
 import ECG_Mod
 from ECG_Mod import ECGProcessor
@@ -56,10 +59,6 @@ class ecg_applicaion:
 
         self.Active_Version = 'raw'
 
-
-
-
-
         # Variables for point select.
         self.selected_index = 0
         self.data = None
@@ -86,6 +85,9 @@ class ecg_applicaion:
         self.m.bind("<Left>", self.on_left)
         self.m.bind("<Right>", self.on_right)
         self.create_menu()
+
+        self.window_duration = 5
+        self.view_start_index = 0
 
     def create_menu(self):
         menubar = tk.Menu(self.m)
@@ -116,36 +118,40 @@ class ecg_applicaion:
 
         return x,y
 
+
     def estimate_sampling_rate(self):
         print(1/np.mean(np.diff(self.X_Data)))
         self.fs = 1/np.mean(np.diff(self.X_Data))
         return 1/np.mean(np.diff(self.X_Data))
 
     def dographs(self, data=None):
-        fig, (a1, a2) = plt.subplots(2, 1, figsize=(8, 5))
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+
+        fig, (a1, a2) = plt.subplots(2, 1, figsize=(10, 6))
         fig.subplots_adjust(hspace=0.7)
-        self.ax1 = a1  # here we are Storing the ECG axis.
-        self.ax2 = a2  # Store the Heart Rate axis.
+        self.ax1 = a1
+        self.ax2 = a2
 
-
-
-        # For testing purposes, I used CSV data, similar to what was done in SigSync
         if data is not None:
-            # Automatically assume the first column is time
             time_col = data.columns[0]
             self.time_values = data[time_col].values
 
-            # Use all other columns as ECG channels
             non_time_cols = data.columns[1:]
-            for col in non_time_cols:
-                a1.plot(self.time_values, data[col], label=col)
 
+            for col in non_time_cols:
+                ecg_values = data[col].values
+                a1.plot(self.time_values, ecg_values, label=col)
+
+            x_min, x_max = self.time_values.min(), self.time_values.max()
+            x_range = x_max - x_min
+            windowFraction = 0.4
+            a1.set_xlim(x_min, x_min + x_range * windowFraction)
 
             a1.set_title("ECG")
             a1.legend()
 
             self.data = data
-            self.time_values = data['Time'].values
             non_time_cols = [col for col in data.columns if col != 'Time']
             if non_time_cols:
                 self.ecg_col = non_time_cols[0]
@@ -155,40 +161,39 @@ class ecg_applicaion:
                 self.ecg_values = None
 
             if self.selected_index >= len(self.time_values):
-                self.selected_index = 0
+                self.selected_index = len(self.time_values) - 1
 
-            # Adding the red marker at the point.
-            x_val = self.time_values[self.selected_index]
+            xVal = self.time_values[self.selected_index]
             y_val = self.ecg_values[self.selected_index] if self.ecg_values is not None else 0
-            self.selected_marker, = a1.plot([x_val], [y_val], 'ro', markersize=8)
-            # Adding the text next to the dot// Rounding to the 2nd decimal spot
-            self.tooltip = a1.text(x_val, y_val, f'Time: {x_val:.2f}\nAmp: {y_val:.2f}',
-                                   fontsize=9, color='black', bbox=dict(facecolor='white', alpha=0.7))
+            self.selected_marker, = a1.plot([xVal], [y_val], 'ro', markersize=8)
+            self.tooltip = a1.text(
+                xVal, y_val,
+                f'Time: {xVal:.2f}\nAmp: {y_val:.2f}',
+                fontsize=9, color='black',
+                bbox=dict(facecolor='white', alpha=0.7)
+            )
         else:
             a1.set_title("ECG")
 
-        a2.set_title("Heart Rate")
-
         if hasattr(self, 'c'):
             self.c.get_tk_widget().destroy()
+            self.toolbar.destroy()
+
+        a2.set_title("Heart Rate")
 
         self.c = FigureCanvasTkAgg(fig, master=self.lsideF)
-
         self.toolbar = NavigationToolbar2Tk(self.c, self.lsideF)
         self.toolbar.update()
         self.toolbar.pack(side=tk.TOP, fill=tk.X)
-
         self.c.draw()
         self.c.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
         self.c.mpl_connect("pick_event", self.on_pick)
 
-        # Here are mouse events
         if data is not None:
+            self.c.mpl_connect("button_press_event", self.press)
+            self.c.mpl_connect("motion_notify_event", self.on_motion)
             self.c.mpl_connect("button_press_event", self.on_click)
             self.c.mpl_connect("motion_notify_event", self.on_drag)
-            self.c.mpl_connect("button_press_event", self.on_press)
-            self.c.mpl_connect("motion_notify_event", self.on_motion)
             self.c.mpl_connect("button_release_event", self.on_release)
 
     def on_pick(self, event):
@@ -201,7 +206,7 @@ class ecg_applicaion:
                 self.c.draw()
                 return
 
-    def on_press(self, event):
+    def press(self, event):
         if event.inaxes is not self.ax1:
             return
         if event.button == 3:
@@ -210,9 +215,9 @@ class ecg_applicaion:
         if event.button == 1:
             for r in list(self.rects):
                 tx, ty = r['close'].get_position()
-                xh = np.ptp(self.ax1.get_xlim())*0.02
-                yh = np.ptp(self.ax1.get_ylim())*0.05
-                if abs(event.xdata-tx)<xh and abs(event.ydata-ty)<yh:
+                xhRange = np.ptp(self.ax1.get_xlim())*0.02
+                yhRange = np.ptp(self.ax1.get_ylim())*0.05
+                if abs(event.xdata-tx)<xhRange and abs(event.ydata-ty)<yhRange:
                     r['patch'].remove()
                     r['close'].remove()
                     self.rects.remove(r)
@@ -220,8 +225,8 @@ class ecg_applicaion:
                     return
             for r in self.rects:
                 x0,y0 = r['patch'].get_xy()
-                w,h  = r['patch'].get_width(), r['patch'].get_height()
-                if x0<=event.xdata<=x0+w and y0<=event.ydata<=y0+h:
+                width,height  = r['patch'].get_width(), r['patch'].get_height()
+                if x0<=event.xdata<=x0+width and y0<=event.ydata<=y0+height:
                     self._dragging = (r, event.xdata, event.ydata, x0, y0)
                     return
 
@@ -242,19 +247,18 @@ class ecg_applicaion:
             r, px, py, x0, y0 = self._dragging
             dx, dy = event.xdata - px, event.ydata - py
 
-            new_x, new_y = x0 + dx, y0 + dy
-            r['patch'].set_xy((new_x, new_y))
+            newX, new_y = x0 + dx, y0 + dy
+            r['patch'].set_xy((newX, new_y))
 
             w, h = r['patch'].get_width(), r['patch'].get_height()
-            cx, cy = new_x + w, new_y + h
+            cx, cy = newX + w, new_y + h
             r['close'].set_position((cx, cy))
 
-            #  indices
-            idxs = np.where((self.time_values >= new_x) &
-                            (self.time_values <= new_x + w))[0]
+            idxs = np.where((self.time_values >= newX) and
+                            (self.time_values <= newX + w))[0]
             r['start'] = idxs.min() if idxs.size else None
             r['end'] = idxs.max() if idxs.size else None
-            print(f"Covers indices {r['start']} to {r['end']}")
+            print(f" indices are  {r['start']} to {r['end']}")
             self.c.draw()
 
     def on_release(self, event):
@@ -345,8 +349,7 @@ class ecg_applicaion:
             r += 1
             for button in button_list:
                 ttk.Button(sectFrame, text=button,
-                           command=self.delete_rectangle if button == "Delete Rectangle" else None).pack(fill=tk.X,
-                                                                                                         padx=5, pady=2)
+                           command=self.delete_rectangle if button == "Delete Rectangle" else None).pack(fill=tk.X,padx=5, pady=2)
 
         # Add more UI elements if needed...
 
@@ -374,7 +377,6 @@ class ecg_applicaion:
             x_val = self.time_values[self.selected_index]
             y_val = self.ecg_values[self.selected_index]
             self.selected_marker.set_data([x_val], [y_val])
-            # Updating the text and position that is presented
             self.tooltip.set_position((x_val, y_val))
             self.tooltip.set_text(f'Time: {x_val:.2f}\nAmp: {y_val:.2f}')
             self.c.draw()
@@ -382,11 +384,9 @@ class ecg_applicaion:
     def on_click(self, event):
         if event.inaxes is not None and self.time_values is not None:
             x_click = event.xdata
-            # Find the index where Time is closest to the click position.
             idx = (np.abs(self.time_values - x_click)).argmin()
             self.selected_index = idx
             self.update_selected_point()
-            # Create a random linear line on the Heart Rate graph.
             self.add_random_heart_line()
 
     def on_drag(self, event):
@@ -407,12 +407,12 @@ class ecg_applicaion:
             self.update_selected_point()
 
     def add_random_heart_line(self):
-        random_slope = np.random.uniform(-0.5, 0.5)
+        randslope = np.random.uniform(-0.5, 0.5)
         random_intercept = np.random.uniform(50, 150)
         if self.heart_line is not None:
             self.heart_line.remove()
         x_vals = np.linspace(*self.ax2.get_xlim(), num=100)
-        y_vals = random_slope * x_vals + random_intercept
+        y_vals = randslope * x_vals + random_intercept
         self.heart_line, = self.ax2.plot(x_vals, y_vals, color='green', linestyle='-', label='Random Linear')
         self.ax2.legend()
         self.c.draw()
@@ -486,18 +486,18 @@ class ecg_applicaion:
         frm.pack(side="left", fill="y")
 
         ttk.Label(frm, text="Threshold Window (sec):").grid(row=0, column=0, sticky="w")
-        self.tw_var = tk.DoubleVar(value=1.0)
+        self.tw_var = tk.DoubleVar()
         ttk.Entry(frm, textvariable=self.tw_var, width=8).grid(row=0, column=1)
 
         ttk.Label(frm, text="Threshold Percentile:").grid(row=1, column=0, sticky="w")
-        self.tp_var = tk.DoubleVar(value=97.5)
+        self.tp_var = tk.DoubleVar()
         ttk.Entry(frm, textvariable=self.tp_var, width=8).grid(row=1, column=1)
 
-        self.abs_var = tk.BooleanVar(value=False)
+        self.abs_var = tk.BooleanVar()
         ttk.Checkbutton(frm, text="Use Absolute Value", variable=self.abs_var) \
             .grid(row=2, column=0, columnspan=2, pady=5)
 
-        self.conv_var = tk.IntVar(value=10)
+        self.conv_var = tk.IntVar()
         hrFrm = ttk.LabelFrame(frm, text="Heart Rate Calculation Settings…")
         hrFrm.grid(row=3, column=0, columnspan=2, sticky="ew", pady=5)
         ttk.Label(hrFrm, text="Convolution Window Size").grid(row=0, column=0, sticky="w")
@@ -548,17 +548,46 @@ class ecg_applicaion:
 
 
     def detect_beats(self):
-        tw = self.tw_var.get()
-        tp = self.tp_var.get()
+        tw = self.tw_var.get()  # Threshold Window (sec)
+        tp = self.tp_var.get()  # Threshold Percentile
 
-        self.processor = ECGProcessor(self.X_Data, self.Y_Data, self.fs)
+        self.processData = ECGProcessor(self.X_Data, self.Y_Data, self.fs)
 
-        ECGProcessor.plot_full_analysis_gui(self.beat_preview_ax, self.heart_rate_ax, self.processor)
+        ECGProcessor.plot_full_analysis_gui(
+            self.beat_preview_ax,
+            self.heart_rate_ax,
+            self.processData,
+            threshold_percentile=tp,
+            threshold_window=tw
+        )
 
         # Redraw canvas
         self.beat_preview_cv.draw()
-        self.beat_preview_ax.legend(loc='upper right')
-        self.beat_preview_cv.draw()
+
+        xlims = self.ax1.get_xlim()
+        ylims = self.ax1.get_ylim()
+
+        # Clear main ECG axis
+        self.ax1.clear()
+
+        # Plot full ECG signal on main axis
+        self.ax1.plot(self.X_Data, self.Y_Data, label='ECG Signal', color='blue')
+
+        # take out detected beats times and values from the processor
+        detected_beats_times =self.processData.X_Data[np.where(self.processData.HeartBeats == 1)]
+        detected_beats_values = self.processData.Y_Data[np.where(self.processData.HeartBeats == 1)]
+
+        # Plot detected beats as red dots
+        self.ax1.plot(detected_beats_times, detected_beats_values, 'ro', label='Detected Beats')
+
+        self.ax1.set_title("ECG")
+        self.ax1.grid(True)
+
+        self.ax1.set_xlim(xlims)
+        self.ax1.set_ylim(ylims)
+
+        # Redraw main canva
+        self.c.draw()
 
     def upload_file(self):
         filepath = filedialog.askopenfilename(
@@ -568,7 +597,7 @@ class ecg_applicaion:
             self.read_csv(filepath)
             self.load_signal_data(filepath)
         else:
-            print("No file selected.")
+            print("No file selected")
 
     def load_signal_data(self, what):
         try:
@@ -611,12 +640,6 @@ class ecg_applicaion:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = ecg_applicaion(root)
+    application = ecg_applicaion(root)
     root.mainloop()
 
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ecg_applicaion(root)
-    root.mainloop()
