@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 import argparse
-from matplotlib import pyplot as plt
-from matplotlib import patches
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox, QFrame, QFileDialog, QMessageBox
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon, QFont
+import pyqtgraph as pg
 from scipy.signal.windows import gaussian as gausswin
 from scipy.signal import butter, lfilter
 from scipy.fft import fft, fftfreq
-from matplotlib.patches import Rectangle
+import sys
 
 
 class ECGProcessor:
@@ -23,51 +25,57 @@ class ECGProcessor:
         self.HeartRate_Y = None
         self.HeartRate_X = None
 
-    def plot_full_analysis_gui(ax1, ax2, processor, threshold_percentile, threshold_window):
-
-        ax1.clear()
-        ax2.clear()
-
-        processor.detect_heart_beats(
+    def render_analysis_results(self, ecg_widget=None, hr_widget=None, threshold_percentile=95.0, threshold_window=5.0):
+        # Detect heart beats first
+        self.find_heartbeats(
             merge_window=50,
             threshold_percentile=threshold_percentile,
             threshold_window=threshold_window
         )
-        processor.splice_ECG(test=True, approximate_locations=[[0, 10000], [40000, 220000]])
-        processor.calculate_heart_rate()
+        
+        # self.splice_ECG(test=True, approximate_locations=[[0, 10000], [40000, 220000]])
+        
+        self.calculate_heart_rate()
 
-        x = processor.X_Data
-        y = processor.Y_Data
-        xb = x[np.where(processor.HeartBeats == 1)]
-        yb = y[np.where(processor.HeartBeats == 1)]
-        xthr = processor.Thresholds_X
-        ythr = processor.Thresholds
+        x = self.X_Data
+        y = self.Y_Data
+        
+        if ecg_widget is not None:
+            ecg_widget.clear()
+            ecg_widget.plot(x, y, pen=pg.mkPen(color=(0, 120, 255)), linewidth=2, label="ECG")
+            
+            if self.HeartBeats is not None:
+                xb = x[np.where(self.HeartBeats == 1)]
+                yb = y[np.where(self.HeartBeats == 1)]
+                if len(xb) > 0:
+                    ecg_widget.plot(xb, yb, pen=None, symbol='o', symbolSize=8, 
+                                   symbolBrush='r', symbolPen=None, label="Detected Beats")
+            
+            if self.Thresholds_X is not None and self.Thresholds is not None:
+                ecg_widget.plot(self.Thresholds_X, self.Thresholds, 
+                               pen=pg.mkPen(color='r', style=pg.QtCore.Qt.PenStyle.DashLine), 
+                               label="Thresholds")
+            
+            for loc in self.SpliceLocations:
+                x1 = loc[0] / self.SamplingRate
+                x2 = loc[1] / self.SamplingRate
+                w = x2 - x1
+                h = np.max(y)
+                rect = pg.QtWidgets.QGraphicsRectItem(x1, np.min(y), w, h - np.min(y))
+                rect.setOpacity(0.3)
+                rect.setBrush(pg.mkBrush('y'))
+                ecg_widget.addItem(rect)
+            
+            ecg_widget.setTitle("ECG Signal with Detected Heartbeats")
+            ecg_widget.setLabel('bottom', "Time (s)")
+            ecg_widget.setLabel('left', "Amplitude")
+            ecg_widget.showGrid(x=True, y=True, alpha=0.3)
+            ecg_widget.addLegend()
 
-        ax1.plot(x, y, label="ECG")
-        ax1.plot(xb, yb, 'r.', markersize=8, label="Heartbeats")
-        ax1.plot(xthr, ythr, '--', color='red', label="Thresholds")
+        if hr_widget is not None:
+            hr_widget.setTitle("Heart Rate Preview")
 
-        for loc in processor.SpliceLocations:
-            x1 = loc[0] / processor.SamplingRate
-            x2 = loc[1] / processor.SamplingRate
-            w = x2 - x1
-            h = np.max(y)
-            rect = Rectangle((x1, np.min(y)), w, h - np.min(y), alpha=0.5)
-            ax1.add_patch(rect)
-
-        ax1.set_title("ECG Signal with Detected Heartbeats")
-        ax1.set_xlabel("Time (s)")
-        ax1.set_ylabel("Amplitude")
-        ax1.grid(True)
-        ax1.legend(loc="upper right")
-
-        ax2.plot(processor.HeartRate_X, processor.HeartRate_Y)
-        ax2.set_title("Heart Rate")
-        ax2.set_xlabel("Time (s)")
-        ax2.set_ylabel("BPM")
-        ax2.grid(True)
-
-    def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=None, threshold_window=None,
+    def find_heartbeats(self, method='dynamicThreshold', threshold_percentile=None, threshold_window=None,
                            merge_window=20):
         if method == 'dynamicThreshold':
             t = self.X_Data
@@ -120,11 +128,11 @@ class ECGProcessor:
             self.Thresholds = thresholds
             self.Thresholds_X = np.arange(0, thresholds.shape[0] / fs, 1 / fs)
 
-    def filter_ECG(self, method='cwt'):
+    def process_ecg_signal(self, method='cwt'):
         if method == 'cwt':
             pass
 
-    def splice_ECG(self, approximate_locations, test=False):
+    def cut_ecg_segments(self, approximate_locations, test=False):
         temp_ecg = np.copy(self.Y_Data)
         temp_heartbeats = np.copy(self.HeartBeats)
 
@@ -190,3 +198,4 @@ class ECGProcessor:
             return self.X_Data
         elif self.Active_Version == 'filtered':
             return self.X_Data_Filtered
+
