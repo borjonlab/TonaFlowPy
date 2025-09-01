@@ -1,3 +1,5 @@
+
+
 import sys
 import os
 import numpy as np
@@ -87,28 +89,30 @@ class BeatDetectionWindow(QWidget):
                 color: #FFFFFF;
             }
             QGroupBox {
-                background-color: #2D2D2D;
-                border: 2px solid #404040;
                 border-radius: 8px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
                 color: #FFFFFF;
+                background-color: #2D2D2D;
+                border: 2px solid #404040;
+
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 10px;
                 padding: 0 5px 0 5px;
                 color: #CCCCCC;
+                left: 10px;
                 font-weight: bold;
             }
             QPushButton {
+                border-radius: 4px;
+                font-weight: bold;
                 background-color: #404040;
                 border: none;
                 color: white;
                 padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
+
             }
             QPushButton:hover {
                 background-color: #505050;
@@ -179,10 +183,10 @@ class BeatDetectionWindow(QWidget):
         # Left side - Controls
         control_frame = QFrame()
         control_frame.setStyleSheet("""
-            QFrame {
-                background-color: #2D2D2D;
+            QFrame {                
                 border: 2px solid #404040;
                 border-radius: 10px;
+                background-color: #2D2D2D;
                 padding: 10px;
             }
         """)
@@ -322,9 +326,9 @@ class BeatDetectionWindow(QWidget):
             }
         """)
         
-        stopButton = QPushButton("Cancel")
-        stopButton.clicked.connect(self.abort_operation)
-        stopButton.setStyleSheet("""
+        stopBut = QPushButton("Cancel")
+        stopBut.clicked.connect(self.abort_operation)
+        stopBut.setStyleSheet("""
             QPushButton {
                 background-color: #404040;
                 border: none;
@@ -343,7 +347,7 @@ class BeatDetectionWindow(QWidget):
         """)
 
         button_row.addWidget(analyze_btn)
-        button_row.addWidget(stopButton)
+        button_row.addWidget(stopBut)
         control_layout.addLayout(button_row)
         
         control_layout.addSpacing(20)
@@ -477,28 +481,29 @@ class BeatDetectionWindow(QWidget):
         self.close()
 
     def transfer_and_exit(self):
-        # mimicing copying the function to the main graph.
+        # copying stuff to the main graph and then leaving
 
         if self.parent and self.parent.X_Data is not None and self.parent.Y_Data is not None:
+            # clear the graph first
             self.parent.main_graph.clear()
-            
-            for item in self.parent.main_graph.items():
-                if isinstance(item, pg.LegendItem):
-                    self.parent.main_graph.removeItem(item)
-            
-            self.parent.main_graph.plot(self.parent.X_Data, self.parent.Y_Data, pen=pg.mkPen(color=(0, 120, 255)), linewidth=2, label='ECG Signal')
-            
+
+            for thing in self.parent.main_graph.items():
+                if isinstance(thing, pg.LegendItem):
+                    self.parent.main_graph.removeItem(thing)
+
+            # draw the ecg line
+            self.parent.main_graph.plot(self.parent.X_Data, self.parent.Y_Data, pen=pg.mkPen(color=(0, 120, 255)),linewidth=2, label='ECG Signal')
+
             if hasattr(self.parent, 'processData') and self.parent.processData:
                 if hasattr(self.parent.processData, 'HeartBeats') and self.parent.processData.HeartBeats is not None:
                     hb_mask = np.where(self.parent.processData.HeartBeats == 1)
                     if hb_mask[0].size > 0:
-                        detected_beats_times = self.parent.X_Data[hb_mask]
-                        detected_beats_values = self.parent.Y_Data[hb_mask]
-                        
-                        self.parent.main_graph.plot(detected_beats_times, detected_beats_values,
-                                               pen=None, symbol='o', symbolSize=10, symbolBrush='r', 
-                                               symbolPen=pg.mkPen(color='r', width=2), label='Detected Heart Beats')
-                        
+                        # plot the little red dots for the beats
+                        beats_x = self.parent.X_Data[hb_mask]
+                        beats_y = self.parent.Y_Data[hb_mask]
+                        self.parent.main_graph.plot(beats_x, beats_y, pen=None, symbol='o', symbolSize=10,
+                                                    symbolBrush='r', symbolPen=pg.mkPen(color='r', width=2),
+                                                    label='Detected Heart Beats')
                         self.parent.main_graph.setTitle("ECG Signal with detected heart beats")
                     else:
                         self.parent.main_graph.setTitle("ECG Signal - no heart beats detected")
@@ -506,25 +511,21 @@ class BeatDetectionWindow(QWidget):
                     self.parent.main_graph.setTitle("ECG Signal")
             else:
                 self.parent.main_graph.setTitle("ECG Signal")
-            
+
             self.parent.main_graph.setLabel('bottom', "Time (s)")
             self.parent.main_graph.setLabel('left', "Amplitude")
             self.parent.main_graph.showGrid(x=True, y=True, alpha=0.3)
             self.parent.main_graph.addLegend()
-            
             x_min, x_max = np.min(self.parent.X_Data), np.max(self.parent.X_Data)
             y_min, y_max = np.min(self.parent.Y_Data), np.max(self.parent.Y_Data)
-            y_range = y_max - y_min
-            margin = y_range * 0.1
+            margin = (y_max - y_min) * 0.1
             self.parent.main_graph.setXRange(x_min, x_max)
             self.parent.main_graph.setYRange(y_min - margin, y_max + margin)
-            
-        else:
-            print("No ECG data")
-        
-        # Close the window
-        self.close()
 
+        else:
+            print("no ECG data")
+
+        self.close()
     def abort_operation(self):
 
         self.close()
@@ -658,7 +659,7 @@ class ECGApplication(QMainWindow):
         heartbeat_group = QGroupBox("Heartbeats")
         hb_layout = QVBoxLayout(heartbeat_group)
 
-        add_btn = QPushButton("Add Heartbeat (at cursor)")
+        add_btn = QPushButton("Add Heartbeat")
         add_btn.clicked.connect(self.add_heartbeat)
         hb_layout.addWidget(add_btn)
 
@@ -832,106 +833,89 @@ class ECGApplication(QMainWindow):
         
 
     def update_plots(self, data: pd.DataFrame):
-        if data is None or not isinstance(data, pd.DataFrame) or data.shape[1] < 2:
+        if data is None or type(data) != pd.DataFrame or data.shape[1] < 2:
             self.main_graph.setTitle("ECG")
             self.sc.setTitle("Heart Rate")
             QMessageBox.warning(self, "no data", "no signal col to plot.")
             return
 
-        time_col = data.columns[0]
-        self.time_values = pd.to_numeric(data[time_col], errors='coerce').to_numpy()
+        tcol = data.columns[0]
+        self.time_values = pd.to_numeric(data[tcol], errors='coerce').to_numpy()
 
         if not np.any(~np.isnan(self.time_values)):
             QMessageBox.warning(self, "time error", "time col contains no valid numbers.")
             return
 
-        non_time_cols = list(data.columns[1:])
+        cols = list(data.columns[1:])
 
         self.main_graph.clear()
         self.sc.clear()
         if self.main_graph.legend():
             self.main_graph.removeItem(self.main_graph.legend())
 
-        # Colors (rgb)
-        colors = [
-            (230, 25, 75),    # r
-            (60, 180, 75),    # g
-            (67, 99, 216),    # b
-            (0, 191, 191),    # c
-            (240, 50, 230),   # m
-            (255, 225, 25),   # y
-            (245, 130, 48),   # o
-            (145, 30, 180),   # p
-        ]
+        colors = [(230, 25, 75), (60, 180, 75), (67, 99, 216), (0, 191, 191), (240, 50, 230), (255, 225, 25), (245, 130, 48), (145, 30, 180)]
 
-        first_valid_y = None
+        firsty = None
 
-        for i, col in enumerate(non_time_cols):
-            ecg_values = pd.to_numeric(data[col], errors='coerce').to_numpy()
-            mask = ~np.isnan(self.time_values) & ~np.isnan(ecg_values)
-            if not np.any(mask):
-                continue
-            pen = pg.mkPen(color=colors[i % len(colors)])
-            self.main_graph.plot(self.time_values[mask], ecg_values[mask], pen=pen, linewidth=2.5, label=col)
+        for i in range(len(cols)):
+            c = cols[i]
+            vals = pd.to_numeric(data[c], errors='coerce').to_numpy()
+            mask = ~np.isnan(self.time_values) & ~np.isnan(vals)
+            if np.any(mask):
+                self.main_graph.plot(self.time_values[mask], vals[mask], pen=pg.mkPen(color=colors[i % len(colors)]),linewidth=2.5, label=c)
+                if firsty is None:
+                    firsty = vals[mask]
 
-            if first_valid_y is None:
-                first_valid_y = ecg_values[mask]
-
-
-        x_min, x_max = np.nanmin(self.time_values), np.nanmax(self.time_values)
-        if np.isfinite(x_min) and np.isfinite(x_max) and x_max > x_min:
-            start = x_min
-            window_sec = 5
-            if x_max - x_min > window_sec:
-                self.main_graph.setXRange(x_min, x_min + window_sec)
+        xmin = np.nanmin(self.time_values)
+        xmax = np.nanmax(self.time_values)
+        if np.isfinite(xmin) and np.isfinite(xmax) and xmax > xmin:
+            if xmax - xmin > 5:
+                self.main_graph.setXRange(xmin, xmin + 5)
             else:
-                self.main_graph.setXRange(x_min, x_max)
+                self.main_graph.setXRange(xmin, xmax)
 
-        all_y = []
-        for col in non_time_cols:
-            ecg_values = pd.to_numeric(data[col], errors='coerce').to_numpy()
-            all_y.append(ecg_values[~np.isnan(ecg_values)])
-        if all_y:
-            all_y = np.concatenate(all_y)
-            y_min, y_max = float(np.nanmin(all_y)), float(np.nanmax(all_y))
-            y_span = max(1e-9, y_max - y_min)
-            margin = 0.1 * y_span
-            self.main_graph.setYRange(y_min - margin, y_max + margin, auto=False)
+        ys = []
+        for c in cols:
+            v = pd.to_numeric(data[c], errors='coerce').to_numpy()
+            ys.append(v[~np.isnan(v)])
+        if len(ys) > 0:
+            ys = np.concatenate(ys)
+            ymin = float(np.nanmin(ys))
+            ymax = float(np.nanmax(ys))
+            span = ymax - ymin
+            if span <= 0: span = 1e-9
+            m = 0.1 * span
+            self.main_graph.setYRange(ymin - m, ymax + m, auto=False)
 
-        if first_valid_y is None:
-            first_valid_y = np.array([0.0, 1.0])
-        self._set_initial_ranges_and_lock(self.time_values, first_valid_y)
-
+        if firsty is None:
+            firsty = np.array([0.0, 1.0])
+        self._set_initial_ranges_and_lock(self.time_values, firsty)
+        
         self.data = data
-        non_time_cols_filtered = [c for c in data.columns if c != time_col]
-        if non_time_cols_filtered:
-            self.ecg_col = non_time_cols_filtered[0]
+        cols2 = [c for c in data.columns if c != tcol]
+        if len(cols2) > 0:
+            self.ecg_col = cols2[0]
             self.ecg_values = pd.to_numeric(data[self.ecg_col], errors='coerce').to_numpy()
         else:
             self.ecg_col = None
             self.ecg_values = None
-
         if self.current_point >= len(self.time_values):
             self.current_point = len(self.time_values) - 1
         if self.current_point < 0:
             self.current_point = 0
-
-        xVal = self.time_values[self.current_point]
-        if self.ecg_values is not None and np.isfinite(xVal):
-            y_val = self.ecg_values[self.current_point]
-            if not np.isfinite(y_val):
-                finite_mask = np.isfinite(self.ecg_values)
-                y_val = self.ecg_values[finite_mask][0] if np.any(finite_mask) else 0.0
-
+        xv = self.time_values[self.current_point]
+        if self.ecg_values is not None and np.isfinite(xv):
+            yv = self.ecg_values[self.current_point]
+            if not np.isfinite(yv):
+                m = np.isfinite(self.ecg_values)
+                yv = self.ecg_values[m][0] if np.any(m) else 0.0
             if self.selected_marker:
                 self.main_graph.removeItem(self.selected_marker)
-            self.selected_marker = self.main_graph.plot([xVal], [y_val], pen=pg.mkPen(color='r'), symbol='o', symbolSize=8)
-
+            self.selected_marker = self.main_graph.plot([xv], [yv], pen=pg.mkPen(color='r'), symbol='o', symbolSize=8)
             if self.tooltip:
                 self.main_graph.removeItem(self.tooltip)
-            self.tooltip = self.main_graph.addLabel(f'Time: {xVal:.3f}\nAmp: {y_val:.3f}', pos=(xVal, y_val))
-
-            self.coordinates_display.setText(f"(x, y) = ({xVal:.3f}, {y_val:.3f})")
+            self.tooltip = self.main_graph.addLabel(f'Time: {xv:.3f}\nAmp: {yv:.3f}', pos=(xv, yv))
+            self.coordinates_display.setText(f"(x, y) = ({xv:.3f}, {yv:.3f})")
 
         self.main_graph.setTitle("ECG")
         self.sc.setTitle("Heart Rate")
@@ -943,16 +927,10 @@ class ECGApplication(QMainWindow):
 
 
     def add_heartbeat(self):
-        if self.ecg_values is not None and self.time_values is not None and len(self.time_values):
-            x_val = self.time_values[self.current_point]
-            y_val = self.ecg_values[self.current_point]
-            marker = self.main_graph.plot([x_val], [y_val], pen=pg.mkPen(color='r'), symbol='o', symbolSize=10)
-            self.beat_markers.append(marker)
+        pass
 
     def remove_heartbeat(self):
-        if self.beat_markers:
-            marker = self.beat_markers.pop()
-            self.main_graph.removeItem(marker)
+        pass
 
     def toggle_removal_mode(self):
         pass
@@ -993,8 +971,8 @@ class ECGApplication(QMainWindow):
                     duration = self.X_Data[-1] - self.X_Data[0]
                     self.session_length_label.setText(f"Session Length (s): {duration:.1f}")
                 
-                self.filename_label.setText(f"Filename: {os.path.basename(file_path)}")
-                self.filepath_label.setText(f"Filepath: {file_path}")
+                self.filename_label.setText(f"Filenam {os.path.basename(file_path)}")
+                self.filepath_label.setText(f"Filepath {file_path}")
                 
 
             except Exception as e:
@@ -1045,60 +1023,62 @@ class ECGApplication(QMainWindow):
             margin = y_range * 0.1
             self.main_graph.setXRange(x_min, x_max)
             self.main_graph.setYRange(y_min - margin, y_max + margin)
-            
 
     def update_main_plots(self):
-        if hasattr(self, 'processData') and self.processData:
+        if hasattr(self, "processData") and self.processData:
+
             self.main_graph.clear()
             if self.main_graph.legend():
                 self.main_graph.removeItem(self.main_graph.legend())
-            
-            if getattr(self.processData, "HeartBeats", None) is not None:
-                hb_mask = np.where(self.processData.HeartBeats == 1)
-                if hb_mask[0].size:
-                    detected_beats_times = self.X_Data[hb_mask]
-                    detected_beats_values = self.Y_Data[hb_mask]
-                    
-                    self.main_graph.plot(self.X_Data, self.Y_Data, 
-                                       pen=pg.mkPen(color=(0, 120, 255)), linewidth=2, label='ECG Signal')
-                    self.main_graph.plot(detected_beats_times, detected_beats_values,
-                                       pen=None, symbol='o', symbolSize=10, symbolBrush='r', 
-                                       symbolPen=pg.mkPen(color='r', width=2), label='Detected Heart Beats')
+
+            if hasattr(self.processData, "HeartBeats") and self.processData.HeartBeats is not None:
+                beats = np.where(self.processData.HeartBeats == 1)
+
+                if len(beats[0]) > 0:
+                    times = self.X_Data[beats]
+                    vals = self.Y_Data[beats]
+
+                    self.main_graph.plot(self.X_Data, self.Y_Data, pen=pg.mkPen(color=(0, 120, 255)), linewidth=2,
+                                         label="ECG Signal")
+                    self.main_graph.plot(times, vals, pen=None, symbol="o", symbolSize=10,
+                                         symbolBrush="r", symbolPen=pg.mkPen(color="r", width=2),
+                                         label="Detected Heart Beats")
+
                     self.main_graph.setTitle("ECG Signal with Detected Heart Beats")
-                    
-                    self.main_graph.setLabel('bottom', "Time (s)")
-                    self.main_graph.setLabel('left', "Amplitude")
+                    self.main_graph.setLabel("bottom", "Time (s)")
+                    self.main_graph.setLabel("left", "Amplitude")
                     self.main_graph.showGrid(x=True, y=True, alpha=0.3)
                     self.main_graph.addLegend()
-                    
+
                     y_min = np.min(self.Y_Data)
                     y_max = np.max(self.Y_Data)
-                    y_range = y_max - y_min
-                    margin = y_range * 0.1
-                    self.main_graph.setYRange(y_min - margin, y_max + margin)
+                    rng = y_max - y_min
+                    more = rng * 0.1
+                    self.main_graph.setYRange(y_min - more, y_max + more)
+
                 else:
-                    self.main_graph.plot(self.X_Data, self.Y_Data, 
-                                       pen=pg.mkPen(color=(0, 120, 255)), linewidth=2, label='ECG Signal')
+                    self.main_graph.plot(self.X_Data, self.Y_Data, pen=pg.mkPen(color=(0, 120, 255)), linewidth=2,label="ECG Signal")
                     self.main_graph.setTitle("ECG Signal - No Heart Beats Detected")
-                    self.main_graph.setLabel('bottom', "Time (s)")
-                    self.main_graph.setLabel('left', "Amplitude")
+                    self.main_graph.setLabel("bottom", "Time (s)")
+                    self.main_graph.setLabel("left", "Amplitude")
                     self.main_graph.showGrid(x=True, y=True, alpha=0.3)
                     self.main_graph.addLegend()
+
             else:
-                self.main_graph.plot(self.X_Data, self.Y_Data, 
-                                   pen=pg.mkPen(color=(0, 120, 255)), linewidth=2, label='ECG Signal')
-                self.main_graph.setTitle("ECG Signal - Heart Beat Detection Results")
-                self.main_graph.setLabel('bottom', "Time (s)")
-                self.main_graph.setLabel('left', "Amplitude")
+                self.main_graph.plot(self.X_Data, self.Y_Data, pen=pg.mkPen(color=(0, 120, 255)), linewidth=2,label="ECG Signal")
+                self.main_graph.setTitle("ECG Signal  Heart Beat Detection Results")
+                self.main_graph.setLabel("bottom", "Time (s)")
+                self.main_graph.setLabel("left", "Amplitude")
                 self.main_graph.showGrid(x=True, y=True, alpha=0.3)
                 self.main_graph.addLegend()
 
-            if getattr(self.processData, "HeartRate_X", None) is not None and getattr(self.processData, "HeartRate_Y", None) is not None:
-                self.sc.clear()
-                self.sc.setTitle("Heart Rate Data Available")
-                self.sc.setLabel('bottom', "Time (s)")
-                self.sc.setLabel('left', "BPM")
-                self.sc.showGrid(x=True, y=True, alpha=0.3)
+            if hasattr(self.processData, "HeartRate_X") and hasattr(self.processData, "HeartRate_Y"):
+                if self.processData.HeartRate_X is not None and self.processData.HeartRate_Y is not None:
+                    self.sc.clear()
+                    self.sc.setTitle("Heart Rate Data Available")
+                    self.sc.setLabel("bottom", "Time (s)")
+                    self.sc.setLabel("left", "BPM")
+                    self.sc.showGrid(x=True, y=True, alpha=0.3)
 
             self._apply_view_lock(self.view_locked)
 
@@ -1121,28 +1101,49 @@ class ECGApplication(QMainWindow):
             self.update_selected_point()
 
     def update_selected_point(self):
-        if self.time_values is not None and self.ecg_values is not None and len(self.time_values):
-            idx = int(np.clip(self.current_point, 0, len(self.time_values) - 1))
+        # only run if we actually have time and ecg values
+        if self.time_values is not None and self.ecg_values is not None and len(self.time_values) > 0:
+
+            # figure out the index of the current point
+            if self.current_point < 0:
+                idx = 0
+            elif self.current_point >= len(self.time_values):
+                idx = len(self.time_values) - 1
+            else:
+                idx = int(self.current_point)
+
+            # grab the x and y values
             x_val = self.time_values[idx]
             y_val = self.ecg_values[idx]
+
+            # if the y value is not a real number (like NaN), try to fix it
             if not np.isfinite(y_val):
-                finite_idx = np.where(np.isfinite(self.ecg_values))[0]
-                if finite_idx.size:
-                    nearest = finite_idx[np.argmin(np.abs(finite_idx - idx))]
-                    y_val = self.ecg_values[nearest]
+                finite_points = np.where(np.isfinite(self.ecg_values))[0]
+                if len(finite_points) > 0:
+                    # pick the closest real value
+                    closest = finite_points[np.argmin(np.abs(finite_points - idx))]
+                    y_val = self.ecg_values[closest]
                 else:
+                    # if there are no real values at all, just set y = 0
                     y_val = 0.0
 
-            if self.selected_marker:
+            # remove old marker if it exists, then draw a new one
+            if self.selected_marker is not None:
                 self.main_graph.removeItem(self.selected_marker)
-            self.selected_marker = self.main_graph.plot([x_val], [y_val], pen=pg.mkPen(color='r'), symbol='o', symbolSize=8)
+            self.selected_marker = self.main_graph.plot([x_val], [y_val],
+                                                        pen=pg.mkPen(color='r'),
+                                                        symbol='o', symbolSize=8)
 
-            if self.tooltip:
+            # remove old tooltip if it exists, then make a new one
+            if self.tooltip is not None:
                 self.main_graph.removeItem(self.tooltip)
-            self.tooltip = self.main_graph.addLabel(f'Time: {x_val:.3f}\nAmp: {y_val:.3f}', pos=(x_val, y_val))
+            self.tooltip = self.main_graph.addLabel(f"Time: {x_val:.3f}\nAmp: {y_val:.3f}",
+                                                    pos=(x_val, y_val))
 
+            # also show the coordinates as text somewhere else
             self.coordinates_display.setText(f"(x, y) = ({x_val:.3f}, {y_val:.3f})")
 
+            # keep the view locked if it's supposed to be
             self._apply_view_lock(self.view_locked)
 
     def _apply_view_lock(self, lock):
@@ -1158,6 +1159,9 @@ if __name__ == "__main__":
     app.setStyle('Fusion')
 
     win = ECGApplication(csv_path)
+    win.show()
+
+    sys.exit(app.exec())
     win.show()
 
     sys.exit(app.exec())
