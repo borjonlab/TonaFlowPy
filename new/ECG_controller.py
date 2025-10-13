@@ -54,7 +54,9 @@ class ECG_controller(QObject):
         else:
             self.ecg.HeartBeats[selected_point[2]] = 1
             self.update_ecg_plot()
-            pass
+            # deselect point
+            self.parent.main_graph.point_selector.deselectPoint()
+            
 
     def remove_heartbeat(self):
         selected_point = self.parent.main_graph.point_selector.current_selection
@@ -65,7 +67,8 @@ class ECG_controller(QObject):
         else:
             self.ecg.HeartBeats[selected_point[2]] = 0
             self.update_ecg_plot()
-            pass
+            self.parent.main_graph.point_selector.deselectPoint()
+            
     
 
 

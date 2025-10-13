@@ -339,69 +339,32 @@ class EcgPlot(pg.PlotWidget):
         self.heartbeats_line.setDownsampling(True)
 
     def setup_mouse_events(self):
-        self.scene().sigMouseClicked.connect(self.mouse_clicked)
+        # self.scene().sigMouseClicked.connect(self.mouse_clicked)
+        self.ecg_line.sigPointsClicked.connect(self.select)
+        self.heartbeats_line.sigPointsClicked.connect(self.select)
+        
 
-    # def insert_removal_region(self):
-    #     region = pg.LinearRegionItem((4,5))
-    #     self.addItem(region)
-    #     self.RemovalRegions.append(region)
+    def select(self,evt,pts):
+        print(pts)
+        xp,yp = pts[0].pos()
+        self.point_selector.setPoint(self.ecg_line.xData,self.ecg_line.yData,xp,yp)        
+        pass
 
-    # Event functions
-    def mouse_clicked(self,evt):
-        vb = self.plotItem.vb
-        scene_coords = evt.scenePos()
-        if self.sceneBoundingRect().contains(scene_coords) and evt.button() == Qt.MouseButton.LeftButton:
-            mouse_point = vb.mapSceneToView(scene_coords)
-            print(f'clicked plot X: {mouse_point.x()}, Y: {mouse_point.y()}, event: {evt}')
-            
 
-            # x_data, y_data = self.ecg_line.getData()
-            x_data = self.ecg_line.xData
-            y_data = self.ecg_line.yData
-            nx = self.point_selector.try_selection(mouse_point.x(),mouse_point.y(),x_data, y_data)
-            # x = [float(self.ecg_line.xData[nx])]
-            # y = [float(self.ecg_line.yData[nx])]
-            # self.selected_point.setData(x,y)
-            # br = []
-            # for i,x in enumerate(self.ecg_line.xData):
-            #     br.append('g')
-            #     if i == nx:
-            #         br.append('r')
-            # self.ecg_line.setSymbolBrush(br)
-            
     class SelectedPoint(pg.PlotDataItem):
         def __init__(self, *args, **kargs):
             super().__init__(*args, **kargs)
             self.current_selection = None
+        def setPoint(self,Xd,Yd,x,y):
+            # Get index 
+            ixx = np.where(Xd == x)
+            # ixy = np.where(Yd == y)
+            self.current_selection = (x,y,ixx)
+            self.setData([x],[y])
+        def deselectPoint(self):
+            self.current_selection = (None, None, None)
+            self.setData([],[])
 
-        def get_nearest_point(self, x, y, queryX, queryY):
-            queryX = np.asarray(queryX)
-            queryY = np.asarray(queryY)
-
-            if queryX.size == 0 or queryY.size == 0:
-                return None
-
-            dx = queryX - x
-            dy = queryY - y
-            dist_sq = dx**2 + dy**2
-            dist_sq = np.sqrt(dist_sq)
-
-            ix = np.argmin(dist_sq)
-            return [float(queryX[ix])], [float(queryY[ix])], ix
-            
-
-        
-        # in this function we will attempt to see if the X,Y coordinates (given by user input - ie mouseclick) 
-        # are sufficiently close to a given point in the real data.
-        def try_selection(self,x,y,queryX, queryY):
-            closest_point = self.get_nearest_point(x,y,queryX,queryY)
-            print(closest_point)
-            
-            self.setData(closest_point[0],closest_point[1])
-            self.current_selection = (closest_point[0],closest_point[1],closest_point[2])
-
-            
-            # self.setData(x,y)
 
 class HeartRatePlot(pg.PlotWidget):
     def __init__(self):

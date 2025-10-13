@@ -176,13 +176,9 @@ class ECGApplication(QMainWindow):
         removal_group = QGroupBox("Data Removal")
         removal_layout = QVBoxLayout(removal_group)
         
-        toggle_btn = QPushButton("Toggle Removal Mode")
-        toggle_btn.clicked.connect(self.toggle_removal_mode)
-        removal_layout.addWidget(toggle_btn)
-        
-        draw_btn = QPushButton("Draw Removal Interval")
-        draw_btn.clicked.connect(self.draw_removal_interval)
-        removal_layout.addWidget(draw_btn)
+        insert_removal_region_btn = QPushButton("Insert Removal Region")
+        insert_removal_region_btn.clicked.connect(self.insert_removal_region)
+        removal_layout.addWidget(insert_removal_region_btn)
         
         layout.addWidget(removal_group)
 
@@ -230,7 +226,7 @@ class ECGApplication(QMainWindow):
     def remove_heartbeat(self):
         self.controller.remove_heartbeat()
 
-    def toggle_removal_mode(self):
+    def insert_removal_region(self):
         self.controller.insert_removal_region()
 
     def draw_removal_interval(self):
