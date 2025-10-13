@@ -74,12 +74,25 @@ except Exception as e:
                 hr_widget.setTitle("Heart Rate Preview")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 class BeatDetectionWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
         self.setWindowTitle("Beat Detection Settings")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1500, 600)
         
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         
@@ -436,8 +449,6 @@ class BeatDetectionWindow(QWidget):
 
     def run_beat_analysis(self):
 
-
-
         if self.parent and self.parent.data is not None:
             try:
                 tw = float(self.window_input.text())
@@ -545,11 +556,18 @@ class BeatDetectionWindow(QWidget):
         self.close()
 
 
+
+
+
+
+
+
+
 class ECGApplication(QMainWindow):
     def __init__(self, csvPath=None):
         super().__init__()
         self.setWindowTitle("ECG Analysis")
-        self.setGeometry(100, 100, 1200, 720)
+        self.setGeometry(100, 100, 1800, 720)
 
         self.set_dark_theme()
 
@@ -952,8 +970,10 @@ class ECGApplication(QMainWindow):
         if file_path:
             try:
                 df = pd.read_csv(file_path)
-                x = df['Time'].values
-                y = df['Y'].values
+                # x = df['Time'].values
+                # y = df['Y'].values
+                x = df.iloc[:,0]
+                y = df.iloc[:,1]
                 
                 self.data = df
                 self.X_Data = x
@@ -968,7 +988,7 @@ class ECGApplication(QMainWindow):
                     self.sampling_rate_label.setText(f"Sampling Rate (Hz): {self.SamplingRate:.1f}")
                 
                 if self.X_Data is not None and len(self.X_Data) > 1:
-                    duration = self.X_Data[-1] - self.X_Data[0]
+                    duration = self.X_Data.iloc[-1] - self.X_Data.iloc[0]
                     self.session_length_label.setText(f"Session Length (s): {duration:.1f}")
                 
                 self.filename_label.setText(f"Filenam {os.path.basename(file_path)}")

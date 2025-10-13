@@ -45,10 +45,10 @@ class ECGProcessor:
             ecg_widget.plot(x, y, pen=pg.mkPen(color=(0, 120, 255)), linewidth=2, label="ECG")
             
             if self.HeartBeats is not None:
-                xb = x[np.where(self.HeartBeats == 1)]
-                yb = y[np.where(self.HeartBeats == 1)]
+                xb = x[np.where(self.HeartBeats == 1)[0]]
+                yb = y[np.where(self.HeartBeats == 1)[0]]
                 if len(xb) > 0:
-                    ecg_widget.plot(xb, yb, pen=None, symbol='o', symbolSize=8, 
+                    ecg_widget.plot(xb.to_numpy(), yb.to_numpy(), pen=None, symbol='o', symbolSize=8, 
                                    symbolBrush='r', symbolPen=None, label="Detected Beats")
             
             if self.Thresholds_X is not None and self.Thresholds is not None:
