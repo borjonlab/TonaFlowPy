@@ -342,13 +342,20 @@ class EcgPlot(pg.PlotWidget):
         # self.scene().sigMouseClicked.connect(self.mouse_clicked)
         self.ecg_line.sigPointsClicked.connect(self.select)
         self.heartbeats_line.sigPointsClicked.connect(self.select)
+        self.point_selector.sigPointsClicked.connect(self.select)
         
 
     def select(self,evt,pts):
         print(pts)
         xp,yp = pts[0].pos()
-        self.point_selector.setPoint(self.ecg_line.xData,self.ecg_line.yData,xp,yp)        
-        pass
+        if self.point_selector.current_selection is not None:
+            if xp == self.point_selector.current_selection[0]:
+                self.point_selector.deselectPoint()
+            else:
+                self.point_selector.setPoint(self.ecg_line.xData,self.ecg_line.yData,xp,yp)        
+        elif self.point_selector.current_selection is None:
+            self.point_selector.setPoint(self.ecg_line.xData,self.ecg_line.yData,xp,yp)        
+
 
 
     class SelectedPoint(pg.PlotDataItem):

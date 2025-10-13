@@ -268,7 +268,8 @@ def main():
 #     ps = pstats.Stats(pr).sort_stats(SortKey.CUMULATIVE)
 #     ps.strip_dirs()
 #     ps.print_stats()
-if __name__ == "__main__":
+# if __name__ == "__main__":
+def main():
     import cProfile
     import pstats
     from pstats import SortKey

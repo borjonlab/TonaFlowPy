@@ -47,7 +47,7 @@ class ECG_controller(QObject):
     def add_heartbeat(self):
         # Get the current selection for the plot
         selected_point = self.parent.main_graph.point_selector.current_selection
-        if selected_point is None:
+        if selected_point[0] is None: #subscript with 0, because technically a tuple of None is NOT None, so it selects all the points which is insane
             QMessageBox.information(self.parent, "No point selected!", "Please select a point.")
         elif self.ecg.HeartBeats is None:
             QMessageBox.information(self.parent, "No beat detection!", "Beat detection not run.")
@@ -60,7 +60,7 @@ class ECG_controller(QObject):
 
     def remove_heartbeat(self):
         selected_point = self.parent.main_graph.point_selector.current_selection
-        if selected_point is None:
+        if selected_point[0] is None:
             QMessageBox.information(self.parent, "No point selected!", "Please select a point.")
         elif self.ecg.HeartBeats is None:
             QMessageBox.information(self.parent, "No beat detection!", "Beat detection not run.")
