@@ -28,6 +28,8 @@ class ECG:
         self.HeartRate_Y = None
         ## Active versioning
         self.Active_Version = 'raw'
+        # Filtering
+        self.Is_Filtered = False
         
         # FFT 
         self.fft_xf = None
@@ -42,6 +44,9 @@ class ECG:
             file = pd.read_csv(filepath)
             x = file.iloc[:, 0].to_numpy(dtype='float')
             y = file.iloc[:, 1].to_numpy(dtype='float')
+            
+            # Normalize so that baseline is around zero 
+            y = y - np.mean(y)
             # return x,y
             self.X_Data = x
             self.Y_Data = y
@@ -193,17 +198,53 @@ class ECG:
         return y
         # return b, a
 
-    def wavelet_bandpass(self):
-        from ssqueezepy import cwt
-        from ssqueezepy.experimental import scale_to_freq
-        wavelet = ('morlet', {'mu': 10})
-        N2 = 1024
-        y2 = self.Y_Data
-        sc = 80
-        Wx2, scales2, *_ = cwt(y2, wavelet, fs=N2, scales='log')
-        freq2 = scale_to_freq(scales2, wavelet, N2, fs=N2 / sc)
-        power2 = (abs(Wx2)) ** 2
-        pass
+    # def wavelet_bandpass(self):
+    #     from ssqueezepy import cwt
+    #     from ssqueezepy.experimental import scale_to_freq
+    #     wavelet = ('morlet', {'mu': 10})
+    #     N2 = 1024
+    #     y2 = self.Y_Data
+    #     sc = 80
+    #     Wx2, scales2, *_ = cwt(y2, wavelet, fs=N2, scales='log')
+    #     freq2 = scale_to_freq(scales2, wavelet, N2, fs=N2 / sc)
+    #     power2 = (abs(Wx2)) ** 2
+    #     pass
+
+    def wavelet_bandpass(self,lowcutoff,highcutoff,set=False):
+        from ssqueezepy import cwt, wavelets, Wavelet, icwt
+        from ssqueezepy.wavelets import center_frequency
+        from ssqueezepy.utils import make_scales, cwt_scalebounds
+        import matplotlib.pyplot as plt
+
+        N = len(self.Y_Data)
+        fs = self.SamplingRate
+
+        wavelet = Wavelet('morlet')
+        # print("changed")
+        # Calculate cutoffs in scales 
+        
+        highcut_scale = (center_frequency(wavelet) * fs) / highcutoff
+        lowcut_scale = (center_frequency(wavelet) * fs) / lowcutoff
+
+        scales_filtered = make_scales(N, scaletype='log', nv=32, min_scale = highcut_scale, max_scale = lowcut_scale)
+        
+        # Calculate
+        Wx, _ = cwt(self.Y_Data, wavelet, scales = scales_filtered)
+        YRec = icwt(Wx, wavelet, scales_filtered)
+
+        if set == True:
+            self.X_Data_Filtered = self.X_Data
+            self.Y_Data_Filtered = YRec
+            # Set Is Filtered to true
+            self.Is_Filtered = True
+        else:
+            return YRec
+
+
+        # plt.figure()
+        # plt.plot(YRec)
+        # plt.plot(self.Y_Data)
+        # plt.show()
 
     def calculate_fft(self):
         xdata = self.X_Data
@@ -228,11 +269,11 @@ class ECG:
     #     yy = 2.0/N * np.abs(yf[:N//2])
 
     # Get and Set functions
-    def get_components(self):
-        if self.Active_Version == 'raw':
-            return self.X_Data
-        elif self.Active_Version == 'filtered':
-            return self.X_Data_Filtered
+    # def get_components(self):
+    #     if self.Active_Version == 'raw':
+    #         return self.X_Data
+    #     elif self.Active_Version == 'filtered':
+    #         return self.X_Data_Filtered
 
 # # Debug and testing
 

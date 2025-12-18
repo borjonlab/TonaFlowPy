@@ -318,6 +318,7 @@ import pyqtgraph as pg
 
 
 class FilteringWindow(QWidget):
+    settingsChanged = pyqtSignal(dict)
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -325,26 +326,44 @@ class FilteringWindow(QWidget):
         self.setWindowTitle("ECG Filter Settings")
         self.setGeometry(100, 100, 1500, 600)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-
+        
+        
         self.setup_ui()
         self.initialize_plot_items()
         self.applyStyles()
+        self.connect_signals()
 
-    # -------------------------------------------------
-    # Plot initialization
-    # -------------------------------------------------
+    def connect_signals(self):
+        self.cutlower.textChanged.connect(self.emit_settings)
+        self.cutUpper.textChanged.connect(self.emit_settings)
+
+    def emit_settings(self):
+        """Collect current settings and emit as dict"""
+        try:
+            settings = self.get_all_settings()
+            self.settingsChanged.emit(settings)
+        except ValueError:
+            pass  # Ignore incomplete inputs
+
+    def get_all_settings(self):
+        settings = {
+            "low_cutoff": float(self.cutlower.text()),
+            "high_cutoff": float(self.cutUpper.text())
+        }
+        return settings
+
     def initialize_plot_items(self):
-        self.ECG_line = pg.PlotDataItem()
-        self.filtered_ecg_line = pg.PlotDataItem()
+        filtpen = pg.mkPen(color = 'r', width = 3)
+
+        self.ECG_line = pg.PlotDataItem(name = "Raw ECG")
+        self.filtered_ecg_line = pg.PlotDataItem(pen = filtpen, name = "Filtered ECG")
         self.fft_line = pg.PlotDataItem()
 
         self.ecg_display.addItem(self.ECG_line)
-        self.filtered_ecg_display.addItem(self.filtered_ecg_line)
+        self.ecg_display.addItem(self.filtered_ecg_line)
+        # self.filtered_ecg_display.addItem(self.filtered_ecg_line)
         self.fft_plot.addItem(self.fft_line)
 
-    # -------------------------------------------------
-    # Styling
-    # -------------------------------------------------
     def applyStyles(self):
         self.setStyleSheet("""
             QWidget {
@@ -388,13 +407,10 @@ class FilteringWindow(QWidget):
             }
         """)
 
-    # -------------------------------------------------
-    # UI Setup
-    # -------------------------------------------------
+    
     def setup_ui(self):
         main_layout = QHBoxLayout(self)
 
-        # ---------- LEFT CONTROL PANEL ----------
         control_frame = QFrame()
         control_frame.setStyleSheet("""
             QFrame {
@@ -442,7 +458,6 @@ class FilteringWindow(QWidget):
         control_layout.addWidget(cancel_btn)
         control_layout.addStretch()
 
-        # ---------- RIGHT GRAPH AREA ----------
         graph_frame = QFrame()
         graph_frame.setStyleSheet("""
             QFrame {
@@ -462,15 +477,16 @@ class FilteringWindow(QWidget):
         self.ecg_display.setLabel('bottom', 'Time (s)')
         self.ecg_display.showGrid(x=True, y=True, alpha=0.3)
         self.ecg_display.setBackground('#1A252F')
-
-        self.filtered_ecg_display = pg.PlotWidget(title="Filtered ECG")
-        self.filtered_ecg_display.setLabel('left', 'Amplitude')
-        self.filtered_ecg_display.setLabel('bottom', 'Time (s)')
-        self.filtered_ecg_display.showGrid(x=True, y=True, alpha=0.3)
-        self.filtered_ecg_display.setBackground('#1A252F')
+        leg = self.ecg_display.addLegend()
+        
+        # self.filtered_ecg_display = pg.PlotWidget(title="Filtered ECG")
+        # self.filtered_ecg_display.setLabel('left', 'Amplitude')
+        # self.filtered_ecg_display.setLabel('bottom', 'Time (s)')
+        # self.filtered_ecg_display.showGrid(x=True, y=True, alpha=0.3)
+        # self.filtered_ecg_display.setBackground('#1A252F')
 
         left_graph_layout.addWidget(self.ecg_display)
-        left_graph_layout.addWidget(self.filtered_ecg_display)
+        # left_graph_layout.addWidget(self.filtered_ecg_display)
 
         # Right graph (third plot)
         self.fft_plot = pg.PlotWidget(title="Spectrogram")

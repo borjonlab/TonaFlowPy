@@ -143,6 +143,7 @@ class ECG_controller(QObject):
         self.filterwindow = FilteringWindow(self.parent)
         self.filterwindow.show()
 
+        self.filterwindow.settingsChanged.connect(self.plot_ecg_filt_preview)
         self.plot_filt_preview()
         self.plot_fft_preview()
 
@@ -158,6 +159,16 @@ class ECG_controller(QObject):
         self.filterwindow.fft_plot.setYRange(lo,up)
         # ix = np.argmin(np.abs(0.023 - self.ecg.fft_xf))
         # up = np.max(self.ecg.fft_yy[up:])
+
+
+    def run_filter(self, settings):
+        self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'],set = True) #Add set = true to set the filtered data to the object
+        self.filterwindow.close()
+        self.update_ecg_plot()
+
+    def plot_ecg_filt_preview(self, settings: dict):
+        filtecg = self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'])
+        self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data,filtecg)
 
     # def calculate_fft(self):
     #     xdata = self.ecg.X_Data
