@@ -1,3 +1,4 @@
+import scipy
 import numpy as np
 import pandas as pd
 import argparse
@@ -27,6 +28,10 @@ class ECG:
         self.HeartRate_Y = None
         ## Active versioning
         self.Active_Version = 'raw'
+        
+        # FFT 
+        self.fft_xf = None
+        self.fft_yy = None
 
     # Setup Functions
     def estimate_sampling_rate(self):
@@ -199,6 +204,28 @@ class ECG:
         freq2 = scale_to_freq(scales2, wavelet, N2, fs=N2 / sc)
         power2 = (abs(Wx2)) ** 2
         pass
+
+    def calculate_fft(self):
+        xdata = self.X_Data
+        ydata = self.Y_Data
+        N = len(xdata)
+        T = 1/self.SamplingRate
+        yf = scipy.fftpack.fft(ydata)
+        xf = np.linspace(0.0,1.0/(2.0*T),N//2)
+        yy = 2.0/N * np.abs(yf[:N//2])
+
+        self.fft_xf = xf
+        self.fft_yy = yy
+        
+        return (xf,yy)
+
+    #     xdata = self.ecg.X_Data
+    #     ydata = self.ecg.Y_Data
+    #     N = len(xdata)
+    #     T = 1/self.ecg.SamplingRate
+    #     yf = scipy.fftpack.fft(ydata)
+    #     xf = np.linspace(0.0, 1.0/(2.0*T), N//2)
+    #     yy = 2.0/N * np.abs(yf[:N//2])
 
     # Get and Set functions
     def get_components(self):

@@ -13,7 +13,7 @@ import numpy as np
 from widgets import BeatDetectionWindow, FilteringWindow
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt
-
+import scipy
 
 
 class ECG_controller(QObject):
@@ -46,8 +46,8 @@ class ECG_controller(QObject):
             if len(self.ecg.X_Data) > 0 and len(self.ecg.Y_Data) > 0:
                 self.parent.main_graph.ecg_line.setData(self.ecg.X_Data, self.ecg.Y_Data)
                 view_box = self.parent.main_graph.getViewBox()
-                if view_box:
-                    view_box.autoRange()
+                # if view_box:
+                #     view_box.autoRange()
 
         if self.ecg.HeartBeats is not None:
             self.parent.main_graph.heartbeats_line.setData(self.ecg.X_Data[self.ecg.HeartBeats == 1],
@@ -135,9 +135,47 @@ class ECG_controller(QObject):
         self.beatwindow.ECG_line.setData(self.ecg.X_Data, self.ecg.Y_Data)
         self.beatwindow.threshold_line.setData(self.ecg.Thresholds_X, self.ecg.Thresholds)
 
+
+
+
+    ##### Filtering 
     def open_filter_ecg(self):
         self.filterwindow = FilteringWindow(self.parent)
         self.filterwindow.show()
+
+        self.plot_filt_preview()
+        self.plot_fft_preview()
+
+    def plot_filt_preview(self):
+        self.filterwindow.ECG_line.setData(self.ecg.X_Data, self.ecg.Y_Data)
+
+    def plot_fft_preview(self):
+        self.ecg.calculate_fft()
+        self.filterwindow.fft_line.setData(self.ecg.fft_xf,self.ecg.fft_yy)
+        #calculate y lim range, we will do everything from 0.023 on because there is a large spike @ 0 
+        up = np.max(self.ecg.fft_yy[3:])
+        lo = np.min(self.ecg.fft_yy[3:])
+        self.filterwindow.fft_plot.setYRange(lo,up)
+        # ix = np.argmin(np.abs(0.023 - self.ecg.fft_xf))
+        # up = np.max(self.ecg.fft_yy[up:])
+
+    # def calculate_fft(self):
+    #     xdata = self.ecg.X_Data
+    #     ydata = self.ecg.Y_Data
+    #     N = len(xdata)
+    #     T = 1/self.ecg.SamplingRate
+    #     yf = scipy.fftpack.fft(ydata)
+    #     xf = np.linspace(0.0, 1.0/(2.0*T), N//2)
+    #     yy = 2.0/N * np.abs(yf[:N//2])
+
+        # self.filterwindow.fft_line.setData(xf,yy)
+
+        # fig, ax = plt.subplots()
+        # ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
+        # plt.show()
+
+
+    ##### Exporting 
 
     def export_csv(self):
 

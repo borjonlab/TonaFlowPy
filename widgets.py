@@ -309,6 +309,14 @@ class BeatDetectionWindow(QWidget):
 
 
 
+from PyQt6.QtWidgets import (
+    QWidget, QHBoxLayout, QVBoxLayout, QFrame,
+    QPushButton, QLabel, QGroupBox, QLineEdit, QComboBox
+)
+from PyQt6.QtCore import Qt
+import pyqtgraph as pg
+
+
 class FilteringWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -317,19 +325,27 @@ class FilteringWindow(QWidget):
         self.setWindowTitle("ECG Filter Settings")
         self.setGeometry(100, 100, 1500, 600)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
         self.setup_ui()
         self.initialize_plot_items()
         self.applyStyles()
 
-
+    # -------------------------------------------------
+    # Plot initialization
+    # -------------------------------------------------
     def initialize_plot_items(self):
         self.ECG_line = pg.PlotDataItem()
         self.filtered_ecg_line = pg.PlotDataItem()
-        self.ecg_display.addItem(self.ECG_line)
-        self.ecg_display.addItem(self.filtered_ecg_line)
+        self.fft_line = pg.PlotDataItem()
 
+        self.ecg_display.addItem(self.ECG_line)
+        self.filtered_ecg_display.addItem(self.filtered_ecg_line)
+        self.fft_plot.addItem(self.fft_line)
+
+    # -------------------------------------------------
+    # Styling
+    # -------------------------------------------------
     def applyStyles(self):
-        """Apply dark  style"""
         self.setStyleSheet("""
             QWidget {
                 background-color: #1E1E1E;
@@ -340,16 +356,14 @@ class FilteringWindow(QWidget):
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
-                color: #FFFFFF;
                 background-color: #2D2D2D;
                 border: 2px solid #404040;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                padding: 0 5px 0 5px;
+                padding: 0 5px;
                 color: #CCCCCC;
                 left: 10px;
-                font-weight: bold;
             }
             QPushButton {
                 border-radius: 4px;
@@ -359,228 +373,133 @@ class FilteringWindow(QWidget):
                 color: white;
                 padding: 8px 16px;
             }
-            QPushButton:hover {
-                background-color: #505050;
-            }
-            QPushButton:pressed {
-                background-color: #303030;
-            }
-            QLineEdit {
+            QPushButton:hover { background-color: #505050; }
+            QPushButton:pressed { background-color: #303030; }
+            QLineEdit, QComboBox {
                 background-color: #2D2D2D;
                 border: 2px solid #505050;
                 padding: 6px;
                 color: #FFFFFF;
                 border-radius: 4px;
-            }
-            QLineEdit:focus {
-                border-color: #808080;
-            }
-            QComboBox {
-                background-color: #2D2D2D;
-                border: 2px solid #505050;
-                padding: 6px;
-                color: #FFFFFF;
-                border-radius: 4px;
-            }
-            QComboBox:focus {
-                border-color: #808080;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 6px solid #FFFFFF;
-                margin-right: 5px;
             }
             QLabel {
-                color: #FFFFFF;
                 font-weight: bold;
                 font-size: 12px;
             }
         """)
 
+    # -------------------------------------------------
+    # UI Setup
+    # -------------------------------------------------
     def setup_ui(self):
-        close_button = QPushButton("✕")
-        close_button.setStyleSheet("""
-            QPushButton {
-                background-color: #E74C3C;
-                border: none;
-                color: white;
-                padding: 4px 8px;
-                border-radius: 12px;
-                font-weight: bold;
-                font-size: 12px;
-                min-width: 20px;
-                max-width: 20px;
-            }
-            QPushButton:hover {
-                background-color: #C0392B;
-            }
-            QPushButton:pressed {
-                background-color: #A93226;
-            }
-        """)
-        close_button.clicked.connect(self.close)
+        main_layout = QHBoxLayout(self)
 
-        # Main layout
-        layout = QHBoxLayout()
-
-        # Left side - Controls
+        # ---------- LEFT CONTROL PANEL ----------
         control_frame = QFrame()
         control_frame.setStyleSheet("""
-            QFrame {                
+            QFrame {
                 border: 2px solid #404040;
                 border-radius: 10px;
                 background-color: #2D2D2D;
                 padding: 10px;
             }
         """)
-        control_layout = QVBoxLayout()
+        control_frame.setMaximumWidth(300)
+        control_layout = QVBoxLayout(control_frame)
 
+        close_button = QPushButton("✕")
+        close_button.clicked.connect(self.close)
         control_layout.addWidget(close_button)
-        control_layout.addSpacing(5)
 
         header = QLabel("ECG Filter Settings")
-        header.setStyleSheet("""
-            QLabel {
-                color: #FFFFFF;
-                font-weight: bold;
-                font-size: 16px;
-                padding: 8px;
-                border-bottom: 2px solid #404040;
-            }
-        """)
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setStyleSheet("font-size: 16px; padding: 8px;")
         control_layout.addWidget(header)
-        control_layout.addSpacing(10)
 
-        # Filter Settings Group
         filter_box = QGroupBox("Filter Settings")
-        filter_box_layout = QVBoxLayout()
+        filter_layout = QVBoxLayout(filter_box)
 
-        # Filter Type
-        filterBoxStruct = QHBoxLayout()
-        filter_type_lbl = QLabel("Filter Type:")
-        filter_type_lbl.setStyleSheet("min-width: 150px;")
-        filterBoxStruct.addWidget(filter_type_lbl)
         self.filterType = QComboBox()
-        self.filterType.addItems(["Low-pass", "High-pass", "Band-pass", "Band-stop", "Other Filters etc."])
-        self.filterType.setCurrentText("Low-pass")
-        self.filterType.setMaximumWidth(120)
-        filterBoxStruct.addWidget(self.filterType)
-        filter_box_layout.addLayout(filterBoxStruct)
+        self.filterType.addItems(["Low-pass", "High-pass", "Band-pass", "Band-stop"])
+        filter_layout.addWidget(QLabel("Filter Type"))
+        filter_layout.addWidget(self.filterType)
 
-        #Upper and Lower Section? - We can change this later, may not be necessary.
-        cutoffLower_struct = QHBoxLayout()
-        cutoffLowerLabel = QLabel("Lower:")
-        cutoffLowerLabel.setStyleSheet("min-width: 150px;")
-        cutoffLower_struct.addWidget(cutoffLowerLabel)
         self.cutlower = QLineEdit("30")
-        self.cutlower.setMaximumWidth(100)
-        cutoffLower_struct.addWidget(self.cutlower)
-        filter_box_layout.addLayout(cutoffLower_struct)
-
-        cutoff_upper_layout = QHBoxLayout()
-        cutoff_upper_lbl = QLabel("Upper:")
-        cutoff_upper_lbl.setStyleSheet("min-width: 150px;")
-        cutoff_upper_layout.addWidget(cutoff_upper_lbl)
         self.cutUpper = QLineEdit("40")
-        self.cutUpper.setMaximumWidth(100)
-        cutoff_upper_layout.addWidget(self.cutUpper)
-        filter_box_layout.addLayout(cutoff_upper_layout)
+        filter_layout.addWidget(QLabel("Lower Cutoff"))
+        filter_layout.addWidget(self.cutlower)
+        filter_layout.addWidget(QLabel("Upper Cutoff"))
+        filter_layout.addWidget(self.cutUpper)
 
-        filter_box.setLayout(filter_box_layout)
         control_layout.addWidget(filter_box)
 
-        # Filter Calc.
-        filterCalculationBox = QGroupBox("Filter Calculation Settings")
-        filter_calc_layout = QVBoxLayout()
-        sampling_rate_layout = QHBoxLayout()
-        sampling_rate_lbl = QLabel("Sampling Rate:")
-        sampling_rate_lbl.setStyleSheet("min-width: 150px;")
-        sampling_rate_layout.addWidget(sampling_rate_lbl)
-        self.sampling_rate_input = QLineEdit("500")
-        self.sampling_rate_input.setMaximumWidth(100)
-        sampling_rate_layout.addWidget(self.sampling_rate_input)
-        filter_calc_layout.addLayout(sampling_rate_layout)
-
-        filterCalculationBox.setLayout(filter_calc_layout)
-        control_layout.addWidget(filterCalculationBox)
-
-        # Preview Settings
-        prev_group = QGroupBox("Preview Settings")
-        prev_layout = QVBoxLayout()
-
-        psize_layout = QHBoxLayout()
-        psize_label = QLabel("Preview Size")
-        psize_label.setStyleSheet("min-width: 150px;")
-        psize_layout.addWidget(psize_label)
-        self.psize_input = QLineEdit("1.0")
-        self.psize_input.setMaximumWidth(100)
-        psize_layout.addWidget(self.psize_input)
-        prev_layout.addLayout(psize_layout)
-
-        prev_group.setLayout(prev_layout)
-        control_layout.addWidget(prev_group)
-        bttStruct = QHBoxLayout()
-        analyze_btn = QPushButton("Run Analysis")
+        analyze_btn = QPushButton("Filter")
         analyze_btn.clicked.connect(self.run_analysis)
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.close)
-        bttStruct.addWidget(analyze_btn)
-        bttStruct.addWidget(cancel_btn)
-        control_layout.addLayout(bttStruct)
-        control_layout.addStretch()
-        control_frame.setLayout(control_layout)
-        control_frame.setMaximumWidth(300)
 
+        control_layout.addWidget(analyze_btn)
+        control_layout.addWidget(cancel_btn)
+        control_layout.addStretch()
+
+        # ---------- RIGHT GRAPH AREA ----------
         graph_frame = QFrame()
         graph_frame.setStyleSheet("""
             QFrame {
-                background-color: #1E1E1E;
                 border: 2px solid #404040;
                 border-radius: 10px;
                 padding: 10px;
             }
         """)
-        graph_layout = QVBoxLayout()
 
-        self.ecg_display = pg.PlotWidget()
-        self.ecg_display.setTitle("ECG Preview")
+        graph_layout = QHBoxLayout(graph_frame)
+
+        # Left graphs (stacked)
+        left_graph_layout = QVBoxLayout()
+
+        self.ecg_display = pg.PlotWidget(title="ECG")
         self.ecg_display.setLabel('left', 'Amplitude')
         self.ecg_display.setLabel('bottom', 'Time (s)')
         self.ecg_display.showGrid(x=True, y=True, alpha=0.3)
         self.ecg_display.setBackground('#1A252F')
 
-        self.filtered_ecg_display = pg.PlotWidget()
-        self.filtered_ecg_display.setTitle("Filtered ECG Plot")
+        self.filtered_ecg_display = pg.PlotWidget(title="Filtered ECG")
         self.filtered_ecg_display.setLabel('left', 'Amplitude')
-        self.filtered_ecg_display.setLabel('bottom', 'Time ')
+        self.filtered_ecg_display.setLabel('bottom', 'Time (s)')
         self.filtered_ecg_display.showGrid(x=True, y=True, alpha=0.3)
         self.filtered_ecg_display.setBackground('#1A252F')
 
-        graph_layout.addWidget(self.ecg_display)
-        graph_layout.addWidget(self.filtered_ecg_display)
-        graph_frame.setLayout(graph_layout)
+        left_graph_layout.addWidget(self.ecg_display)
+        left_graph_layout.addWidget(self.filtered_ecg_display)
 
-        layout.addWidget(control_frame)
-        layout.addWidget(graph_frame)
-        self.setLayout(layout)
+        # Right graph (third plot)
+        self.fft_plot = pg.PlotWidget(title="Spectrogram")
+        self.fft_plot.setLabel('left', 'Power')
+        self.fft_plot.setLabel('bottom', 'Frequency (Hz)')
+        self.fft_plot.showGrid(x=True, y=True, alpha=0.3)
+        self.fft_plot.setBackground('#1A252F')
+
+        graph_layout.addLayout(left_graph_layout, stretch=2)
+        graph_layout.addWidget(self.fft_plot, stretch=1)
+
+
+
+
+
+        main_layout.addWidget(control_frame)
+        main_layout.addWidget(graph_frame)
 
     def run_analysis(self):
         pass
+
     def update_ecg_display(self):
         if self.parent and hasattr(self.parent, 'controller'):
-            controller = self.parent.controller
-            if hasattr(controller, 'ecg') and controller.ecg is not None:
-                if hasattr(controller.ecg, 'X_Data') and hasattr(controller.ecg, 'Y_Data'):
-                    if controller.ecg.X_Data is not None and controller.ecg.Y_Data is not None:
-                        if len(controller.ecg.X_Data) > 0 and len(controller.ecg.Y_Data) > 0:
-                            self.ECG_line.setData(controller.ecg.X_Data, controller.ecg.Y_Data)
-                            self.filtered_ecg_line.setData(controller.ecg.X_Data, controller.ecg.Y_Data)
+            ecg = getattr(self.parent.controller, 'ecg', None)
+            if ecg and ecg.X_Data is not None and ecg.Y_Data is not None:
+                self.ECG_line.setData(ecg.X_Data, ecg.Y_Data)
+                self.filtered_ecg_line.setData(ecg.X_Data, ecg.Y_Data)
+                self.fft_plot.setData(ecg.fft_xf, ecg.fft_yy)
+
     def showEvent(self, event):
         super().showEvent(event)
         self.update_ecg_display()
