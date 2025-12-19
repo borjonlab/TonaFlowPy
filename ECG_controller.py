@@ -143,7 +143,10 @@ class ECG_controller(QObject):
         self.filterwindow = FilteringWindow(self.parent)
         self.filterwindow.show()
 
+        self.filterwindow.analysisRun.connect(self.run_filter)
+
         self.filterwindow.settingsChanged.connect(self.plot_ecg_filt_preview)
+        self.filterwindow.run_analysis
         self.plot_filt_preview()
         self.plot_fft_preview()
 
@@ -157,17 +160,20 @@ class ECG_controller(QObject):
         up = np.max(self.ecg.fft_yy[3:])
         lo = np.min(self.ecg.fft_yy[3:])
         self.filterwindow.fft_plot.setYRange(lo,up)
-        # ix = np.argmin(np.abs(0.023 - self.ecg.fft_xf))
-        # up = np.max(self.ecg.fft_yy[up:])
+        self.filterwindow.fft_plot.setXRange(np.min(self.ecg.fft_xf),np.max(self.ecg.fft_xf))
+        # Update the lines for the filter boundaries in the FFT Plot 
+        
 
 
-    def run_filter(self, settings):
+    def run_filter(self, settings: dict):
         self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'],set = True) #Add set = true to set the filtered data to the object
         self.filterwindow.close()
         self.update_ecg_plot()
 
     def plot_ecg_filt_preview(self, settings: dict):
         filtecg = self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'])
+        self.filterwindow.fft_lower_boundaries.setRegion((0,settings['low_cutoff']))
+        self.filterwindow.fft_upper_boundaries.setRegion((settings['high_cutoff'],30000))
         self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data,filtecg)
 
     # def calculate_fft(self):

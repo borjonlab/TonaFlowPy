@@ -319,6 +319,7 @@ import pyqtgraph as pg
 
 class FilteringWindow(QWidget):
     settingsChanged = pyqtSignal(dict)
+    analysisRun = pyqtSignal(dict)
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -354,15 +355,20 @@ class FilteringWindow(QWidget):
 
     def initialize_plot_items(self):
         filtpen = pg.mkPen(color = 'r', width = 3)
-
+        ## Filter Plot
         self.ECG_line = pg.PlotDataItem(name = "Raw ECG")
         self.filtered_ecg_line = pg.PlotDataItem(pen = filtpen, name = "Filtered ECG")
+        ## FFT Plot
         self.fft_line = pg.PlotDataItem()
+        self.fft_lower_boundaries = pg.LinearRegionItem((0,float(self.cutlower.text())),movable=False)
+        self.fft_upper_boundaries = pg.LinearRegionItem((float(self.cutUpper.text()),30000),movable=False)
 
         self.ecg_display.addItem(self.ECG_line)
         self.ecg_display.addItem(self.filtered_ecg_line)
         # self.filtered_ecg_display.addItem(self.filtered_ecg_line)
         self.fft_plot.addItem(self.fft_line)
+        self.fft_plot.addItem(self.fft_lower_boundaries)
+        self.fft_plot.addItem(self.fft_upper_boundaries)
 
     def applyStyles(self):
         self.setStyleSheet("""
@@ -506,7 +512,8 @@ class FilteringWindow(QWidget):
         main_layout.addWidget(graph_frame)
 
     def run_analysis(self):
-        pass
+        settings = self.get_all_settings()
+        self.analysisRun.emit(settings)
 
     def update_ecg_display(self):
         if self.parent and hasattr(self.parent, 'controller'):
