@@ -11,11 +11,16 @@ from scipy.fft import fft, fftfreq
 
 class ECG:
     def __init__(self):
-        # self.X_Data, self.Y_Data = self.read_csv(csvPath)
-        self.X_Data = []
-        self.Y_Data = []
-        # self.read_csv(csvPath)
-        # self.SamplingRate = self.estimate_sampling_rate()
+        ## Raw Data
+        self.X_Data_Raw = []
+        self.Y_Data_Raw = []
+
+        self.X_Data_Filtered = []
+        self.Y_Data_Filtered = []
+
+        # self.X_Data() = []
+        # self.Y_Data() = []
+
         self.SamplingRate = None
         ## inits
         self.X_Data_Filtered, self.Y_Data_Filtered = None, None
@@ -37,7 +42,7 @@ class ECG:
 
     # Setup Functions
     def estimate_sampling_rate(self):
-        return 1 / np.mean(np.diff(self.X_Data))
+        return 1 / np.mean(np.diff(self.X_Data()))
 
     def read_csv(self, filepath):
         try:
@@ -48,15 +53,29 @@ class ECG:
             # Normalize so that baseline is around zero 
             y = y - np.mean(y)
             # return x,y
-            self.X_Data = x
-            self.Y_Data = y
+
+            self.X_Data_Raw = x
+            self.Y_Data_Raw = y
             self.SamplingRate = self.estimate_sampling_rate()
             return 1
         except:
             return 0
 
-    # Hard Calculations
+    # Get Functions
+    def X_Data(self):
+        # Check if it is filtered 
+        if self.Is_Filtered:
+            return self.X_Data_Filtered
+        else:
+            return self.X_Data_Raw
+    def Y_Data(self):
+        if self.Is_Filtered:
+            return self.Y_Data_Filtered
+        else:
+            return self.Y_Data_Raw
 
+
+    # Hard Calculations
     def calculate_heart_rate(self, window_size=10):
         fs = self.SamplingRate
         gauss_filter = gausswin(int(fs * window_size), std=1 * fs)
@@ -79,6 +98,10 @@ class ECG:
             self.HeartRate_Y = np.convolve(hb, gauss_filter, 'same') * fs * 60
             self.HeartRate_X = np.arange(0, len(hb) / fs, 1 / fs)
 
+
+
+
+
     def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=97.5, threshold_window=1,
                            merge_window=20):
         if method == 'dynamicThreshold':
@@ -86,8 +109,8 @@ class ECG:
             # t = self.active_ecg.X_Data
             # y = self.active_ecg.Y_Data
             # fs = self.active_ecg.Fs
-            t = self.X_Data
-            y = self.Y_Data
+            t = self.X_Data()
+            y = self.Y_Data()
             fs = self.SamplingRate
 
             ses_len = t[len(t) - 1] - t[0]  # length of session
@@ -145,7 +168,7 @@ class ECG:
             nspk2 = np.int64(nspk2)
             # Create a dummy array for the heart beats
             # dum = np.zeros(int(np.ceil(ses_len*fs)))
-            dum = np.zeros(len(self.X_Data))
+            dum = np.zeros(len(self.X_Data()))
 
             dum[nspk2] = 1  # Set heartbeats = 1
             # Assign to self.beats
@@ -163,8 +186,8 @@ class ECG:
         temp_heartbeats = np.copy(self.HeartBeats)
 
         for loc in approximate_locations:
-            L = np.argmin(np.abs(self.X_Data - loc[0]))
-            R = np.argmin(np.abs(self.X_Data - loc[1]))
+            L = np.argmin(np.abs(self.X_Data() - loc[0]))
+            R = np.argmin(np.abs(self.X_Data() - loc[1]))
 
             # Find first beat to the left
             left_beat_index = next((i for i in range(L, 0, -1) if self.HeartBeats[i] == 1), 0)
@@ -194,7 +217,7 @@ class ECG:
         low = lowcut / nyq
         high = highcut / nyq
         b, a = butter(order, [low, high], btype='band')
-        y = lfilter(b, a, self.Y_Data)
+        y = lfilter(b, a, self.Y_Data())
         return y
         # return b, a
 
@@ -203,7 +226,7 @@ class ECG:
     #     from ssqueezepy.experimental import scale_to_freq
     #     wavelet = ('morlet', {'mu': 10})
     #     N2 = 1024
-    #     y2 = self.Y_Data
+    #     y2 = self.Y_Data()
     #     sc = 80
     #     Wx2, scales2, *_ = cwt(y2, wavelet, fs=N2, scales='log')
     #     freq2 = scale_to_freq(scales2, wavelet, N2, fs=N2 / sc)
@@ -216,7 +239,7 @@ class ECG:
         from ssqueezepy.utils import make_scales, cwt_scalebounds
         import matplotlib.pyplot as plt
 
-        N = len(self.Y_Data)
+        N = len(self.Y_Data())
         fs = self.SamplingRate
 
         wavelet = Wavelet('morlet')
@@ -229,11 +252,11 @@ class ECG:
         scales_filtered = make_scales(N, scaletype='log', nv=32, min_scale = highcut_scale, max_scale = lowcut_scale)
         
         # Calculate
-        Wx, _ = cwt(self.Y_Data, wavelet, scales = scales_filtered)
+        Wx, _ = cwt(self.Y_Data(), wavelet, scales = scales_filtered)
         YRec = icwt(Wx, wavelet, scales_filtered)
 
         if set == True:
-            self.X_Data_Filtered = self.X_Data
+            self.X_Data_Filtered = self.X_Data()
             self.Y_Data_Filtered = YRec
             # Set Is Filtered to true
             self.Is_Filtered = True
@@ -243,12 +266,12 @@ class ECG:
 
         # plt.figure()
         # plt.plot(YRec)
-        # plt.plot(self.Y_Data)
+        # plt.plot(self.Y_Data())
         # plt.show()
 
     def calculate_fft(self):
-        xdata = self.X_Data
-        ydata = self.Y_Data
+        xdata = self.X_Data()
+        ydata = self.Y_Data()
         N = len(xdata)
         T = 1/self.SamplingRate
         yf = scipy.fftpack.fft(ydata)
@@ -271,7 +294,7 @@ class ECG:
     # Get and Set functions
     # def get_components(self):
     #     if self.Active_Version == 'raw':
-    #         return self.X_Data
+    #         return self.X_Data()
     #     elif self.Active_Version == 'filtered':
     #         return self.X_Data_Filtered
 

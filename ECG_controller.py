@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 import pandas as pd
 import numpy as np
 
-from widgets import BeatDetectionWindow, FilteringWindow
+from widgets import BeatDetectionWindow, FilteringWindow, RemovalRegion
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 import scipy
@@ -42,16 +42,16 @@ class ECG_controller(QObject):
     def update_ecg_plot(self, success=1, *args):
         if not success:
             return
-        if self.ecg.X_Data is not None and self.ecg.Y_Data is not None:
-            if len(self.ecg.X_Data) > 0 and len(self.ecg.Y_Data) > 0:
-                self.parent.main_graph.ecg_line.setData(self.ecg.X_Data, self.ecg.Y_Data)
+        if self.ecg.X_Data() is not None and self.ecg.Y_Data() is not None:
+            if len(self.ecg.X_Data()) > 0 and len(self.ecg.Y_Data()) > 0:
+                self.parent.main_graph.ecg_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
                 view_box = self.parent.main_graph.getViewBox()
                 # if view_box:
                 #     view_box.autoRange()
 
         if self.ecg.HeartBeats is not None:
-            self.parent.main_graph.heartbeats_line.setData(self.ecg.X_Data[self.ecg.HeartBeats == 1],
-                                                           self.ecg.Y_Data[self.ecg.HeartBeats == 1])
+            self.parent.main_graph.heartbeats_line.setData(self.ecg.X_Data()[self.ecg.HeartBeats == 1],
+                                                           self.ecg.Y_Data()[self.ecg.HeartBeats == 1])
             self.ecg.calculate_heart_rate()
             self.update_heartrate_plot()
 
@@ -59,6 +59,7 @@ class ECG_controller(QObject):
         if self.removal_regions is not None:
             # self.ecg.splice_ECG(self.removal_regions["region"])
             self.ecg.splice_ECG(self.get_removal_regions())
+            self.ecg.calculate_heart_rate()
         self.parent.hr_graph.heart_rate_line.setData(self.ecg.HeartRate_X, self.ecg.HeartRate_Y)
 
     def add_heartbeat(self):
@@ -93,19 +94,39 @@ class ECG_controller(QObject):
         return reg
 
     def insert_removal_region(self):
-        # self.parent.main_graph.insert_removal_region()
-        # Insert a removal region
-        region = pg.LinearRegionItem((4, 5))
-        region.sigRegionChanged.connect(self.update_ecg_plot)
-        self.parent.main_graph.addItem(region)
+        if self.ecg.HeartBeats is not None:
+            # Get the current view of the screen, that is where we will insert 
+            xrange = self.parent.main_graph.getViewBox().viewRange()[0]
+            b = (xrange[0] + xrange[1]) / 2
+            u = b + xrange[1]/10
+            region = RemovalRegion((b,u))
+            region.sigRegionChanged.connect(self.update_ecg_plot)
+            region.removeRequest.connect(self.remove_removal_region)
+            self.parent.main_graph.addItem(region)
 
-        reg = region.getRegion()
-        self.removal_regions["object"].append(region)
-        # self.removal_regions["region"].append(reg)
-        # self.ecg.splice_ECG([reg[0],reg[1]])
-        # self.ecg.SpliceLocations.append([reg[0],reg[1]])
+            reg = region.getRegion()
+            self.removal_regions["object"].append(region)
+            # self.removal_regions["region"].append(reg)
+            # self.ecg.splice_ECG([reg[0],reg[1]])
+            # self.ecg.SpliceLocations.append([reg[0],reg[1]])
+            self.ecg.calculate_heart_rate()
+            self.update_ecg_plot()
+        else:
+            QMessageBox.critical(self.parent,"Beat Detection Not Run!", "Beat detection has not been run. Removal Regions cannot be inserted.")
+
+
+    def remove_removal_region(self, region: RemovalRegion):
+        # Remove from plot
+        self.parent.main_graph.removeItem(region)
+
+        # Remove from list
+        if region in self.removal_regions["object"]:
+            self.removal_regions["object"].remove(region)
+
+        # Update ECG plot
         self.ecg.calculate_heart_rate()
         self.update_ecg_plot()
+
 
     ##### Beat detection window
     def open_beat_detection(self):
@@ -132,7 +153,7 @@ class ECG_controller(QObject):
         self.plot_BD_preview()
 
     def plot_BD_preview(self):
-        self.beatwindow.ECG_line.setData(self.ecg.X_Data, self.ecg.Y_Data)
+        self.beatwindow.ECG_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
         self.beatwindow.threshold_line.setData(self.ecg.Thresholds_X, self.ecg.Thresholds)
 
 
@@ -151,7 +172,7 @@ class ECG_controller(QObject):
         self.plot_fft_preview()
 
     def plot_filt_preview(self):
-        self.filterwindow.ECG_line.setData(self.ecg.X_Data, self.ecg.Y_Data)
+        self.filterwindow.ECG_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
 
     def plot_fft_preview(self):
         self.ecg.calculate_fft()
@@ -174,11 +195,11 @@ class ECG_controller(QObject):
         filtecg = self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'])
         self.filterwindow.fft_lower_boundaries.setRegion((0,settings['low_cutoff']))
         self.filterwindow.fft_upper_boundaries.setRegion((settings['high_cutoff'],30000))
-        self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data,filtecg)
+        self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data(),filtecg)
 
     # def calculate_fft(self):
-    #     xdata = self.ecg.X_Data
-    #     ydata = self.ecg.Y_Data
+    #     xdata = self.ecg.X_Data()
+    #     ydata = self.ecg.Y_Data()
     #     N = len(xdata)
     #     T = 1/self.ecg.SamplingRate
     #     yf = scipy.fftpack.fft(ydata)
@@ -200,11 +221,11 @@ class ECG_controller(QObject):
             QMessageBox.warning(self.parent, "N/a Data", "No ECG uploaded.")
             return
         
-        if self.ecg.X_Data is None or self.ecg.Y_Data is None:
+        if self.ecg.X_Data() is None or self.ecg.Y_Data() is None:
             QMessageBox.warning(self.parent, "N/a Data", "No ECG uploaded")
             return
         
-        if len(self.ecg.X_Data) == 0 or len(self.ecg.Y_Data) == 0:
+        if len(self.ecg.X_Data()) == 0 or len(self.ecg.Y_Data()) == 0:
             QMessageBox.warning(self.parent, "N/a Data", "No ECG uploaded")
             return
         
@@ -213,19 +234,16 @@ class ECG_controller(QObject):
         if file_path:
             try:
                 df = pd.DataFrame({
-                    'Time': self.ecg.X_Data,
-                    'Amplitude': self.ecg.Y_Data
+                    'Time': self.ecg.X_Data(),
+                    'Amplitude': self.ecg.Y_Data()
                 })
                 
                 # Exporting
                 df.to_csv(file_path, index=False)
                 QMessageBox.information(self.parent, "CSV exported", f"exported @ {file_path}")
             except Exception as e:
-                QMessageBox.critical(self.parent, "CSV exmport failed", f"Failed  {str(e)}")
+                QMessageBox.critical(self.parent, "CSV export failed", f"Failed  {str(e)}")
 
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ecg_applicaion(root)
-    root.mainloop()
+

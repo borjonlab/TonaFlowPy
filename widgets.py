@@ -11,6 +11,36 @@ import pyqtgraph as pg
 import numpy as np
 
 
+class RemovalRegion(pg.LinearRegionItem):
+    b = pg.mkBrush(color=(0,0,255,125))
+    removeRequest = pyqtSignal(object)
+    def __init__(
+        self,
+        values=(0, 1),
+        orientation='vertical',
+        brush=b,
+        pen=None,
+        hoverBrush=None,
+        hoverPen=None,
+        movable=True,
+        bounds=None,
+        span=(0, 1),
+        swapMode='sort',
+        clipItem=None,
+    ):
+        super().__init__(
+            values, orientation, brush, pen,
+            hoverBrush, hoverPen, movable,
+            bounds, span, swapMode, clipItem
+        )
+        
+
+    def mouseDoubleClickEvent(self, ev):
+        self.removeRequest.emit(self)
+        ev.accept()
+
+
+
 class BeatDetectionWindow(QWidget):
     settingsChanged = pyqtSignal(dict)
     analysisRun = pyqtSignal(dict)
