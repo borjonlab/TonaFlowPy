@@ -170,6 +170,10 @@ class ECG_controller(QObject):
         self.filterwindow.run_analysis
         self.plot_filt_preview()
         self.plot_fft_preview()
+        self.plot_ecg_filt_preview({'low_cutoff':1,'high_cutoff':self.ecg.SamplingRate/2 -1})
+        # Set the textboxes to default values
+        self.filterwindow.cutlower.setText("1")
+        self.filterwindow.cutUpper.setText(str(int(self.ecg.SamplingRate/2 -1)))
 
     def plot_filt_preview(self):
         self.filterwindow.ECG_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
@@ -194,7 +198,7 @@ class ECG_controller(QObject):
     def plot_ecg_filt_preview(self, settings: dict):
         filtecg = self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'])
         self.filterwindow.fft_lower_boundaries.setRegion((0,settings['low_cutoff']))
-        self.filterwindow.fft_upper_boundaries.setRegion((settings['high_cutoff'],30000))
+        self.filterwindow.fft_upper_boundaries.setRegion((settings['high_cutoff'],self.ecg.SamplingRate/2 -1))
         self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data(),filtecg)
 
     # def calculate_fft(self):
@@ -235,7 +239,9 @@ class ECG_controller(QObject):
             try:
                 df = pd.DataFrame({
                     'Time': self.ecg.X_Data(),
-                    'Amplitude': self.ecg.Y_Data()
+                    'Amplitude': self.ecg.Y_Data(),
+                    'HeartBeats': self.ecg.HeartBeats,
+                    'HeartRate': self.ecg.HeartRate_Y
                 })
                 
                 # Exporting

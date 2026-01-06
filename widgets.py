@@ -363,6 +363,7 @@ class FilteringWindow(QWidget):
         self.initialize_plot_items()
         self.applyStyles()
         self.connect_signals()
+        
 
     def connect_signals(self):
         self.cutlower.textChanged.connect(self.emit_settings)
@@ -471,10 +472,10 @@ class FilteringWindow(QWidget):
         filter_box = QGroupBox("Filter Settings")
         filter_layout = QVBoxLayout(filter_box)
 
-        self.filterType = QComboBox()
-        self.filterType.addItems(["Low-pass", "High-pass", "Band-pass", "Band-stop"])
-        filter_layout.addWidget(QLabel("Filter Type"))
-        filter_layout.addWidget(self.filterType)
+        # self.filterType = QComboBox()
+        # self.filterType.addItems(["Low-pass", "High-pass", "Band-pass", "Band-stop"])
+        # filter_layout.addWidget(QLabel("Filter Type"))
+        # filter_layout.addWidget(self.filterType)
 
         self.cutlower = QLineEdit("30")
         self.cutUpper = QLineEdit("40")
@@ -525,7 +526,7 @@ class FilteringWindow(QWidget):
         # left_graph_layout.addWidget(self.filtered_ecg_display)
 
         # Right graph (third plot)
-        self.fft_plot = pg.PlotWidget(title="Spectrogram")
+        self.fft_plot = pg.PlotWidget(title="FFT")
         self.fft_plot.setLabel('left', 'Power')
         self.fft_plot.setLabel('bottom', 'Frequency (Hz)')
         self.fft_plot.showGrid(x=True, y=True, alpha=0.3)
