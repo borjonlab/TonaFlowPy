@@ -3,7 +3,7 @@
 
 
 
-<h1 align='center'>TonaFlow - A Free Program for ECG Processing</h1>
+<h1 align='center'>TonaFlow (Python) - A Free Program for ECG Processing</h1>
 <h2 align='center'> Authors</h2>
 <h3 align='center'> Manash Sahoo, Katherine D. Rhodes, Natasha Mbajonas, Jeremy I. Borjon</h3>
 
