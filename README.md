@@ -11,7 +11,7 @@
 
 
 <h1 class = 'subtitle'> About </h1>
-TonaFlow is a free and open-source program that aims to make standardized ECG processing free and easy for everyone. This version is analogous to the MATLAB version. <a href = "https://github.com/borjonlab/TonaFlow">More information and documentation can be found here</a>.
+TonaFlow is a free and open-source program that aims to make standardized ECG processing free and easy for everyone. While this version is written in Python, it is analogous to the MATLAB version. <a href = "https://github.com/borjonlab/TonaFlow">More information and documentation can be found here</a>.
 
 <h3>Notice: The python version of TonaFlow is currently under development. Expect regular changes and updates.</h3>
 
