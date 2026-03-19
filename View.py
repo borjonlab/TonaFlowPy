@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence
+from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence, QPixmap
 
 import pyqtgraph as pg
 from ECG_controller import ECG_controller
@@ -23,7 +23,7 @@ class ECGApplication(QMainWindow):
         # Set up the events from the controller
         # self.setup_events()
 
-        self.setWindowTitle("ECG Analysis Application")
+        self.setWindowTitle("TonaFlow")
         self.setGeometry(100, 100, 1800, 720)
         self.set_dark_theme()
         self.setup_ui()
@@ -118,8 +118,20 @@ class ECGApplication(QMainWindow):
         )
         control_layout.addWidget(self.coordinates_display)
 
+        self.logo = QLabel()
+        pixmap = QPixmap('./imgs/TF Logo Darkmode.png')
+        self.logo.setScaledContents(True)
+        self.logo.setPixmap(pixmap.scaled(200,200))
+        # main_layout.addWidget(self.logo)
+        control_layout.addWidget(self.logo)
+
         control_layout.addStretch()
         main_layout.addWidget(control_frame, 1)
+
+        
+
+
+        # Tonaflow image? 
 
     def setup_menubar(self):
         menubar = self.menuBar()
@@ -179,7 +191,8 @@ class ECGApplication(QMainWindow):
         view_layout = QVBoxLayout(view_group)
 
         self.show_raw_checkbox = QCheckBox("Show Raw Signal")
-        self.show_raw_checkbox.setChecked(True)
+        self.show_raw_checkbox.setChecked(False)
+        self.show_raw_checkbox.checkStateChanged.connect(self.show_raw_checked)
         view_layout.addWidget(self.show_raw_checkbox)
 
         self.show_partial_checkbox = QCheckBox("Show Partial Calculation Area")
@@ -227,6 +240,9 @@ class ECGApplication(QMainWindow):
     def launch_beat_detection(self):
         """Launch the beat detection window"""
         self.controller.open_beat_detection()
+    
+    def show_raw_checked(self):
+        self.controller.show_raw_checked()
 
     def launch_filter_ecg(self):
         """Launch the filter ECG window"""

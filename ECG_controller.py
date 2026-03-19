@@ -44,7 +44,11 @@ class ECG_controller(QObject):
             return
         if self.ecg.X_Data() is not None and self.ecg.Y_Data() is not None:
             if len(self.ecg.X_Data()) > 0 and len(self.ecg.Y_Data()) > 0:
-                self.parent.main_graph.ecg_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
+                if self.ecg.Is_Filtered == True:
+                    # ECG is filtered, so display the filtered line along with the raw data. We will also need to edit the line of the ecg_line so that the alpha is lowered. 
+                    self.parent.main_graph.filt_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
+                    self.parent.main_graph.ecg_line.setAlpha(.1,False)
+                self.parent.main_graph.ecg_line.setData(self.ecg.X_Data(request_raw=True),self.ecg.Y_Data(request_raw=True))
                 view_box = self.parent.main_graph.getViewBox()
                 # if view_box:
                 #     view_box.autoRange()
@@ -113,6 +117,15 @@ class ECG_controller(QObject):
             self.update_ecg_plot()
         else:
             QMessageBox.critical(self.parent,"Beat Detection Not Run!", "Beat detection has not been run. Removal Regions cannot be inserted.")
+
+    def show_raw_checked(self):
+        checkstatus = self.parent.show_raw_checkbox.checkState()
+        if checkstatus == Qt.CheckState.Checked:
+            self.parent.main_graph.ecg_line.setAlpha(1,False)
+            self.parent.main_graph.filt_line.setAlpha(.2,False)
+        else:
+            self.parent.main_graph.ecg_line.setAlpha(.2,False)
+            self.parent.main_graph.filt_line.setAlpha(1,False)
 
 
     def remove_removal_region(self, region: RemovalRegion):

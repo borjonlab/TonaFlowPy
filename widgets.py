@@ -60,7 +60,7 @@ class BeatDetectionWindow(QWidget):
 
     def initialize_plot_items(self):
         self.ECG_line = pg.PlotDataItem()
-        self.threshold_line = pg.PlotDataItem()
+        self.threshold_line = pg.PlotDataItem(pen='r',width = 3)
         self.ecg_display.addItem(self.ECG_line)
         self.ecg_display.addItem(self.threshold_line)
         pass
@@ -304,15 +304,15 @@ class BeatDetectionWindow(QWidget):
         self.ecg_display.setBackground('#1A252F')
 
         # Heart Rate Preview plot
-        self.hr_display = pg.PlotWidget()
-        self.hr_display.setTitle("Heart Rate Preview")
-        self.hr_display.setLabel('left', 'BPM')
-        self.hr_display.setLabel('bottom', 'Time (s)')
-        self.hr_display.showGrid(x=True, y=True, alpha=0.3)
-        self.hr_display.setBackground('#1A252F')
+        # self.hr_display = pg.PlotWidget()
+        # self.hr_display.setTitle("Heart Rate Preview")
+        # self.hr_display.setLabel('left', 'BPM')
+        # self.hr_display.setLabel('bottom', 'Time (s)')
+        # self.hr_display.showGrid(x=True, y=True, alpha=0.3)
+        # self.hr_display.setBackground('#1A252F')
 
         graph_layout.addWidget(self.ecg_display)
-        graph_layout.addWidget(self.hr_display)
+        # graph_layout.addWidget(self.hr_display)
         graph_frame.setLayout(graph_layout)
 
         layout.addWidget(control_frame)
@@ -543,8 +543,15 @@ class FilteringWindow(QWidget):
         main_layout.addWidget(graph_frame)
 
     def run_analysis(self):
-        settings = self.get_all_settings()
-        self.analysisRun.emit(settings)
+        ecg = getattr(self.parent.controller, 'ecg', None)
+        if ecg.HeartBeats is not None:
+            reply = QMessageBox.question(self.parent,"Alert","Beat analysis already run. Re-filtering will require beat analysis to be run again. Run filtering?",QMessageBox.StandardButton.Yes,QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                settings = self.get_all_settings()
+                self.analysisRun.emit(settings)
+        else:
+            settings = self.get_all_settings()
+            self.analysisRun.emit(settings)
 
     def update_ecg_display(self):
         if self.parent and hasattr(self.parent, 'controller'):
@@ -572,7 +579,8 @@ class EcgPlot(pg.PlotWidget):
         self.RemovalRegions = []
 
     def setup_plot_items(self):
-        self.ecg_line = pg.PlotDataItem(symbol='o', pen='g', symbolBrush='g', symbolSize=4.5, width=1)
+        self.ecg_line = pg.PlotDataItem(symbol='o', pen='g', symbolBrush='g', symbolSize=2.5, width=1)
+        self.filt_line = pg.PlotDataItem(symbol='o', pen='w', symbolBrush='w', symbolSize=2.5, width=1)
         self.heartbeats_line = pg.PlotDataItem(pen='r', symbolPen=None, symbol='o')
         self.point_selector = self.SelectedPoint(
             symbolPen='w',
@@ -585,6 +593,7 @@ class EcgPlot(pg.PlotWidget):
         self.point_selector.set_parent_plot(self)
 
         self.addItem(self.ecg_line)
+        self.addItem(self.filt_line)
         self.addItem(self.heartbeats_line)
         self.addItem(self.point_selector)
         self.addItem(self.coord_label)
@@ -592,6 +601,8 @@ class EcgPlot(pg.PlotWidget):
         # Set downsampling and cliptoview to true for performances
         self.ecg_line.setDownsampling(auto=True)
         self.ecg_line.setClipToView(True)
+        self.filt_line.setDownsampling(auto=True)
+        self.filt_line.setClipToView(True)
         self.heartbeats_line.setDownsampling(auto=True)
         self.heartbeats_line.setDownsampling(True)
 

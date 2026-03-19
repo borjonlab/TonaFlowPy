@@ -62,13 +62,23 @@ class ECG:
             return 0
 
     # Get Functions
-    def X_Data(self):
+    def X_Data(self,request_raw = False):
+        # request_raw is for whether we are specifically requesting the RAW signal. 
+        # Are we specifically requesting the raw data? 
+        if request_raw == True:
+            return self.X_Data_Raw
+        
         # Check if it is filtered 
         if self.Is_Filtered:
             return self.X_Data_Filtered
         else:
             return self.X_Data_Raw
-    def Y_Data(self):
+    def Y_Data(self,request_raw = False):
+        # request_raw is for whether we are specifically requesting the RAW signal. 
+        if request_raw == True:
+            return self.Y_Data_Raw
+        
+        # Check whether it is filtered
         if self.Is_Filtered:
             return self.Y_Data_Filtered
         else:
@@ -252,7 +262,7 @@ class ECG:
         scales_filtered = make_scales(N, scaletype='log', nv=32, min_scale = highcut_scale, max_scale = lowcut_scale)
         
         # Calculate
-        Wx, _ = cwt(self.Y_Data(), wavelet, scales = scales_filtered)
+        Wx, _ = cwt(self.Y_Data(request_raw=True), wavelet, scales = scales_filtered)
         YRec = icwt(Wx, wavelet, scales_filtered)
 
         if set == True:
