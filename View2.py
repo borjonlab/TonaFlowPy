@@ -40,8 +40,8 @@ class ECGApplication(QMainWindow):
                             """)
             # Change the logo accordingly
             pixmap = QPixmap("imgs/logos/TonaFlow_DarkMode.png")
-            pixmap = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
-            self.logolabel.setPixmap(pixmap)
+            self.LOGO_PIXMAP = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
+            self.logolabel.setPixmap(self.LOGO_PIXMAP)
             
             # Change the ECG / HR axes as well
             self.HR_Axis.setup_styling(style="dark")
@@ -55,8 +55,8 @@ class ECGApplication(QMainWindow):
                             """)
             # Change the logo accordingly
             pixmap = QPixmap("imgs/logos/TonaFlow_LightMode.png")
-            pixmap = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
-            self.logolabel.setPixmap(pixmap)
+            self.LOGO_PIXMAP = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
+            self.logolabel.setPixmap(self.LOGO_PIXMAP)
             # Change the ECG / HR axes as well
             self.HR_Axis.setup_styling(style="light")
             self.ECG_Axis.setup_styling(style="light")
@@ -178,7 +178,7 @@ class ECGApplication(QMainWindow):
     def save_project_file_action_clicked(self):
         pass
     def load_ecg_action_clicked(self):
-        print("hi")
+        pass
     def export_data_action_clicked(self):
         pass
     ## ECG...
