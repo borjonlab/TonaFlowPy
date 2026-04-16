@@ -575,8 +575,29 @@ class EcgPlot(pg.PlotWidget):
         self.setup_plot_items()
         self.setup_mouse_events()
         self.setup_keyboard_events()
+        self.setup_labels()
+        self.setup_styling()
 
         self.RemovalRegions = []
+    
+    def setup_styling(self,style="dark"):
+        if style == "light":
+            self.getAxis('left').setPen(pg.mkPen(color='k', width=2))
+            self.getAxis('left').setTextPen(pg.mkPen("#000000"))
+
+            self.getAxis('bottom').setPen(pg.mkPen(color='k', width=2))
+            self.getAxis('bottom').setTextPen(pg.mkPen("#000000"))
+        else:
+            self.getAxis('left').setPen(pg.mkPen(color='w', width=2))
+            self.getAxis('left').setTextPen(pg.mkPen("#ffffff"))
+
+            self.getAxis('bottom').setPen(pg.mkPen(color='w', width=2))
+            self.getAxis('bottom').setTextPen(pg.mkPen("#ffffff"))
+            
+
+    def setup_labels(self):
+        self.setLabel('left', 'ECG Value', units='mV or A.U.')
+        
 
     def setup_plot_items(self):
         self.ecg_line = pg.PlotDataItem(symbol='o', pen='g', symbolBrush='g', symbolSize=2.5, width=1)
@@ -699,8 +720,29 @@ class HeartRatePlot(pg.PlotWidget):
     def __init__(self):
         super().__init__()
         self.setup_plot_items()
+        self.setup_labels()
+        self.setup_styling()
+
+    def setup_styling(self,style="dark"):
+        if style == "light":
+            self.getAxis('left').setPen(pg.mkPen(color='k', width=2))
+            self.getAxis('left').setTextPen(pg.mkPen("#000000"))
+
+            self.getAxis('bottom').setPen(pg.mkPen(color='k', width=2))
+            self.getAxis('bottom').setTextPen(pg.mkPen("#000000"))
+        else:
+            self.getAxis('left').setPen(pg.mkPen(color='w', width=2))
+            self.getAxis('left').setTextPen(pg.mkPen("#ffffff"))
+
+            self.getAxis('bottom').setPen(pg.mkPen(color='w', width=2))
+            self.getAxis('bottom').setTextPen(pg.mkPen("#ffffff"))
 
     def setup_plot_items(self):
         self.heart_rate_line = pg.PlotDataItem(pen='r')
         self.addItem(self.heart_rate_line)
+    
+    def setup_labels(self):
+        self.setLabel('left', 'Heart Rate', units='BPM')
+        self.setLabel('bottom', 'Time', units='s')
+
 

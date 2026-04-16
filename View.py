@@ -89,7 +89,7 @@ class ECGApplication(QMainWindow):
     def setup_control_panel(self, main_layout):
         """Set up the control panel on the right side"""
         control_frame = QFrame()
-        control_layout = QVBoxLayout(control_frame)
+        control_layout = QHBoxLayout(control_frame)
         control_frame.setMaximumWidth(360)
 
         # Heartbeat controls
@@ -110,13 +110,6 @@ class ECGApplication(QMainWindow):
         # Chart controls
         # self.setup_chart_controls(control_layout)
 
-        # Coordinates display
-        self.coordinates_display = QLabel("(x, y) = (—, —)")
-        self.coordinates_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.coordinates_display.setStyleSheet(
-            "background-color: #F0F0F0; color: #000000; padding: 5px; border-radius: 3px;"
-        )
-        control_layout.addWidget(self.coordinates_display)
 
         self.logo = QLabel()
         pixmap = QPixmap('./imgs/TF Logo Darkmode.png')
