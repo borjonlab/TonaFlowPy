@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 import pandas as pd
 import numpy as np
 
-from widgets import BeatDetectionWindow, FilteringWindow, RemovalRegion
+from widgets import BeatDetectionWindow, FilteringWindow, RemovalRegion, AboutWindow
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 import scipy
@@ -214,20 +214,6 @@ class ECG_controller(QObject):
         self.filterwindow.fft_upper_boundaries.setRegion((settings['high_cutoff'],self.ecg.SamplingRate/2 -1))
         self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data(),filtecg)
 
-    # def calculate_fft(self):
-    #     xdata = self.ecg.X_Data()
-    #     ydata = self.ecg.Y_Data()
-    #     N = len(xdata)
-    #     T = 1/self.ecg.SamplingRate
-    #     yf = scipy.fftpack.fft(ydata)
-    #     xf = np.linspace(0.0, 1.0/(2.0*T), N//2)
-    #     yy = 2.0/N * np.abs(yf[:N//2])
-
-        # self.filterwindow.fft_line.setData(xf,yy)
-
-        # fig, ax = plt.subplots()
-        # ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
-        # plt.show()
 
 
     ##### Exporting 
@@ -263,6 +249,11 @@ class ECG_controller(QObject):
             except Exception as e:
                 QMessageBox.critical(self.parent, "CSV export failed", f"Failed  {str(e)}")
 
+    def open_about_window(self):
+        print("Test")
+        self.win = AboutWindow(self.parent)
+        self.win.show()
+        self.win.center_on_parent()
 
 
 

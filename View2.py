@@ -29,6 +29,9 @@ class ECGApplication(QMainWindow):
 
         # Detect the system theme so we can apply the right logo and stylesheet.
         self.detect_os_theme()
+
+        # Set resize to false
+        self.setFixedSize(1800,720)
         
     def detect_os_theme(self):
         if darkdetect.isDark():
@@ -185,12 +188,12 @@ class ECGApplication(QMainWindow):
     def beat_detection_action_clicked(self):
         pass
     def cwt_bandpass_action_clicked(self):
-        pass
+        self.controller.open_filter_ecg()
     ## Help...
     def open_docs_action_clicked(self):
         pass
     def about_action_clicked(self):
-        pass
+        self.controller.open_about_window()
     
 
 
