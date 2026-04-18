@@ -181,7 +181,7 @@ class ECGApplication(QMainWindow):
     def save_project_file_action_clicked(self):
         pass
     def load_ecg_action_clicked(self):
-        pass
+        self.controller.load_data()
     def export_data_action_clicked(self):
         pass
     ## ECG...

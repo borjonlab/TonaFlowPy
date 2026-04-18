@@ -46,15 +46,15 @@ class ECG_controller(QObject):
             if len(self.ecg.X_Data()) > 0 and len(self.ecg.Y_Data()) > 0:
                 if self.ecg.Is_Filtered == True:
                     # ECG is filtered, so display the filtered line along with the raw data. We will also need to edit the line of the ecg_line so that the alpha is lowered. 
-                    self.parent.main_graph.filt_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
-                    self.parent.main_graph.ecg_line.setAlpha(.1,False)
-                self.parent.main_graph.ecg_line.setData(self.ecg.X_Data(request_raw=True),self.ecg.Y_Data(request_raw=True))
-                view_box = self.parent.main_graph.getViewBox()
+                    self.parent.ECG_Axis.filt_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
+                    self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
+                self.parent.ECG_Axis.ecg_line.setData(self.ecg.X_Data(request_raw=True),self.ecg.Y_Data(request_raw=True))
+                view_box = self.parent.ECG_Axis.getViewBox()
                 # if view_box:
                 #     view_box.autoRange()
 
         if self.ecg.HeartBeats is not None:
-            self.parent.main_graph.heartbeats_line.setData(self.ecg.X_Data()[self.ecg.HeartBeats == 1],
+            self.parent.ECG_Axis.heartbeats_line.setData(self.ecg.X_Data()[self.ecg.HeartBeats == 1],
                                                            self.ecg.Y_Data()[self.ecg.HeartBeats == 1])
             self.ecg.calculate_heart_rate()
             self.update_heartrate_plot()
@@ -68,7 +68,7 @@ class ECG_controller(QObject):
 
     def add_heartbeat(self):
         # Get the current selection for the plot
-        selected_point = self.parent.main_graph.point_selector.current_selection
+        selected_point = self.parent.ECG_Axis.point_selector.current_selection
         if selected_point[
             0] is None:  # subscript with 0, because technically a tuple of None is NOT None, so it selects all the points which is insane
             QMessageBox.information(self.parent, "No point selected!", "Please select a point.")
@@ -78,10 +78,10 @@ class ECG_controller(QObject):
             self.ecg.HeartBeats[selected_point[2]] = 1
             self.update_ecg_plot()
             # deselect point
-            self.parent.main_graph.point_selector.deselectPoint()
+            self.parent.ECG_Axis.point_selector.deselectPoint()
 
     def remove_heartbeat(self):
-        selected_point = self.parent.main_graph.point_selector.current_selection
+        selected_point = self.parent.ECG_Axis.point_selector.current_selection
         if selected_point[0] is None:
             QMessageBox.information(self.parent, "No point selected!", "Please select a point.")
         elif self.ecg.HeartBeats is None:
@@ -89,7 +89,7 @@ class ECG_controller(QObject):
         else:
             self.ecg.HeartBeats[selected_point[2]] = 0
             self.update_ecg_plot()
-            self.parent.main_graph.point_selector.deselectPoint()
+            self.parent.ECG_Axis.point_selector.deselectPoint()
 
     def get_removal_regions(self):
         reg = []
@@ -100,13 +100,13 @@ class ECG_controller(QObject):
     def insert_removal_region(self):
         if self.ecg.HeartBeats is not None:
             # Get the current view of the screen, that is where we will insert 
-            xrange = self.parent.main_graph.getViewBox().viewRange()[0]
+            xrange = self.parent.ECG_Axis.getViewBox().viewRange()[0]
             b = (xrange[0] + xrange[1]) / 2
             u = b + xrange[1]/10
             region = RemovalRegion((b,u))
             region.sigRegionChanged.connect(self.update_ecg_plot)
             region.removeRequest.connect(self.remove_removal_region)
-            self.parent.main_graph.addItem(region)
+            self.parent.ECG_Axis.addItem(region)
 
             reg = region.getRegion()
             self.removal_regions["object"].append(region)
@@ -121,16 +121,16 @@ class ECG_controller(QObject):
     def show_raw_checked(self):
         checkstatus = self.parent.show_raw_checkbox.checkState()
         if checkstatus == Qt.CheckState.Checked:
-            self.parent.main_graph.ecg_line.setAlpha(1,False)
-            self.parent.main_graph.filt_line.setAlpha(.2,False)
+            self.parent.ECG_Axis.ecg_line.setAlpha(1,False)
+            self.parent.ECG_Axis.filt_line.setAlpha(.2,False)
         else:
-            self.parent.main_graph.ecg_line.setAlpha(.2,False)
-            self.parent.main_graph.filt_line.setAlpha(1,False)
+            self.parent.ECG_Axis.ecg_line.setAlpha(.2,False)
+            self.parent.ECG_Axis.filt_line.setAlpha(1,False)
 
 
     def remove_removal_region(self, region: RemovalRegion):
         # Remove from plot
-        self.parent.main_graph.removeItem(region)
+        self.parent.ECG_Axis.removeItem(region)
 
         # Remove from list
         if region in self.removal_regions["object"]:
@@ -250,7 +250,6 @@ class ECG_controller(QObject):
                 QMessageBox.critical(self.parent, "CSV export failed", f"Failed  {str(e)}")
 
     def open_about_window(self):
-        print("Test")
         self.win = AboutWindow(self.parent)
         self.win.show()
         self.win.center_on_parent()

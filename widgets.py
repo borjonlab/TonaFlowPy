@@ -756,6 +756,7 @@ class AboutWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+
         self.setWindowTitle("About")
         self.resize(460, 520)
         self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint)
@@ -814,7 +815,7 @@ class AboutWindow(QWidget):
                 }
 
                 #card {
-                    background-color: #d6d6d6;
+                    background-color: #b5b0ff;
                     border-radius: 12px;
                 }
 
@@ -878,8 +879,8 @@ class AboutWindow(QWidget):
         card_layout.addWidget(logo)
 
         about = QLabel(
-            "TonaFlow is a free and open-source application for accessible ECG processing "
-            "for researchers at all technical levels."
+            "<h3>TonaFlow is a free and open-source application for accessible ECG processing"
+            " for researchers at all technical levels. </h3>"
         )
         about.setWordWrap(True)
         about.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -887,7 +888,7 @@ class AboutWindow(QWidget):
         card_layout.addWidget(about)
 
         credits = QLabel(
-            "Built with ❤ by Manash Sahoo.<br>"
+            "<h3>Built with ❤ by Manash Sahoo.</h3><br>"
             "TonaFlow would not be possible without the <i>exceptional</i> support from:<br>"
             "• Natasha Mmbajonas (Interface / GUI)<br>"
             "• Katherine D. Rhodes (Testing)<br>"
@@ -916,13 +917,12 @@ class AboutWindow(QWidget):
     
 
     def center_on_parent(self):
-        if not self.parent():
+        parent = self.parent()
+        if not parent:
             return
 
-        parent_geo = self.parent().frameGeometry()
-        self_geo = self.frameGeometry()
 
-        center_point = parent_geo.center()
-        self_geo.moveCenter(center_point)
+        x = int((parent.rect().width() - self.frameSize().width()) /2)
+        y = int((parent.rect().height() - self.frameSize().height()) /2)
 
-        self.move(self_geo.topLeft())
+        self.move(x,y)
