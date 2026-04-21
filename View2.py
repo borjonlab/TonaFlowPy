@@ -16,7 +16,7 @@ import darkdetect
 
 
 
-class ECGApplication(QMainWindow):
+class TonaFlow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.controller = ECG_controller(self)
@@ -202,7 +202,7 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    window = ECGApplication()
+    window = TonaFlow()
     window.show()
 
     exit_code = app.exec()  # this blocks until window is closed

@@ -749,8 +749,6 @@ class HeartRatePlot(pg.PlotWidget):
         self.setLabel('bottom', 'Time', units='s')
 
 
-
-
 class AboutWindow(QWidget):
     import darkdetect
     def __init__(self, parent=None):
@@ -899,22 +897,18 @@ class AboutWindow(QWidget):
         credits.setWordWrap(True)
         card_layout.addWidget(credits)
 
-        link = QLabel('<a href="http://www.borjonlab.com">Developing Systems Lab Website</a>')
+        link = QLabel('<a href="http://www.borjonlab.com">www.borjonlab.com</a>')
         link.setOpenExternalLinks(True)
         link.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(link)
 
-        link2 = QLabel('<a href="http://www.manashsahoo.com">My Website</a>')
+        link2 = QLabel('<a href="http://www.manashsahoo.com">www.manashsahoo.com</a>')
         link2.setOpenExternalLinks(True)
         link2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(link2)
 
         outer.addWidget(card)
         outer.addStretch()
-
-   
-
-    
 
     def center_on_parent(self):
         parent = self.parent()
