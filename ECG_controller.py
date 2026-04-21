@@ -3,7 +3,7 @@ from ECG import ECG
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from View import ECGApplication
+    from View import TonaFlow
 
 from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -20,10 +20,10 @@ class ECG_controller(QObject):
     # Signals
     dataLoaded = pyqtSignal(int)
 
-    def __init__(self, parent_widget: "ECGApplication"):
+    def __init__(self, parent_widget: "TonaFlow"):
         super().__init__()
         self.ecg: ECG
-        self.parent: "ECGApplication" = parent_widget
+        self.parent: "TonaFlow" = parent_widget
         self.setup_events()
         self.removal_regions = {"object": []}
         pass

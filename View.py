@@ -2,16 +2,16 @@ import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton,
     QCheckBox, QFrame, QFileDialog, QMessageBox, QLineEdit, QGroupBox,
-    QHBoxLayout, QGridLayout, QToolBar, QMenuBar
+    QHBoxLayout, QGridLayout, QToolBar, QMenuBar, QToolButton
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSize
 
 from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence, QPixmap, QIcon
 
 import pyqtgraph as pg
 from ECG_controller import ECG_controller
 
-from widgets import EcgPlot, HeartRatePlot
+from widgets import EcgPlot, HeartRatePlot, InfoBarToggleButton
 import darkdetect
 
 
@@ -87,10 +87,60 @@ class TonaFlow(QMainWindow):
         logo = logo.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
         self.logolabel = QLabel("")
         self.logolabel.setPixmap(logo)
-        container_layout.addWidget(self.logolabel)   
+        container_layout.addWidget(self.logolabel)
+        
+        ### Control Groups for checkboxes and options
+        ## View Controls
+        view_controls_groupbox = QGroupBox("ECG View")
+        view_controls_layout = QHBoxLayout()
+
+        # View filtered signal toggle button
+        self.show_filtered_signal_toggle = InfoBarToggleButton("showfiltered.svg", text="Show Filtered \n ECG Signal")
+        view_controls_layout.addWidget(self.show_filtered_signal_toggle)
+
+        # Show Partial Calculation
+        self.show_partial_calc_toggle = InfoBarToggleButton("showpartialcalc.svg", text="Show Partial \n Calculation")
+        view_controls_layout.addWidget(self.show_partial_calc_toggle)
+
+        # Show ECG Sampling Points
+        self.show_sampling_points_toggle = InfoBarToggleButton("samplingpoints.svg", text="Show ECG \n Samples")
+        view_controls_layout.addWidget(self.show_sampling_points_toggle)
+
+        # Show removed heartbeats checkbox 
+        self.show_removed_heartbeats_toggle = InfoBarToggleButton("removedbeats.svg",text="Show Removed \n Heartbeats")
+        view_controls_layout.addWidget(self.show_removed_heartbeats_toggle)
+
+        # Finally set as the layout for the groupbox
+        view_controls_groupbox.setStyleSheet("""
+                            QGroupBox {
+                                border: 1px solid #d6d6d6;
+                                border-radius: 6px;
+                                margin-top: 18px; /* space for title */
+                                background-color: #242423;
+                            }
+
+                            /* Title styling */
+                                 QGroupBox::title {
+                                subcontrol-origin: margin;
+                                subcontrol-position: top left;
+                                padding: 2px 10px;
+                                margin-left: 8px;
+
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: #ffffff;
+
+                                background-color: #242423;
+                            }
+                                """)
+        view_controls_groupbox.setLayout(view_controls_layout)
+
+        # Add to the container layout for the infobar
+        container_layout.addWidget(view_controls_groupbox)
         container_layout.addStretch()
         ### Finally, add to the main layout
         mainlayout.addWidget(container_frame) 
+        
 
     def setup_plots(self,mainlayout):
         # Create a base frame and layout to put the plots in
@@ -112,11 +162,7 @@ class TonaFlow(QMainWindow):
         toolbar_layout.addWidget(self.remHeartBeat_btn)
         toolbar_layout.addWidget(self.addRemovalRegion_btn)
 
-        ### Add the checkboxes and such
-        self.show_raw_signal_chkbox = QCheckBox("Show Raw Signal")
-        toolbar_layout.addWidget(self.show_raw_signal_chkbox)
-        self.show_partial_calculations_chkbox = QCheckBox("Show Partial Calculations")
-        toolbar_layout.addWidget(self.show_partial_calculations_chkbox)
+    
 
         # Set params
         toolbar_layout.addStretch()
