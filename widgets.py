@@ -922,16 +922,17 @@ class AboutWindow(QWidget):
 
         self.move(x,y)
 
-
-
-class InfoBarToggleButton(QToolButton):
-    def __init__(self,iconName,text=""):
+class InfoBarButton(QToolButton):
+    def __init__(self,iconName,text="",istoggle=False):
         super().__init__()
-        self.setCheckable(True)
+        self.setCheckable(istoggle)
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self.change_style_mode(iconName)
         self.setIconSize(QSize(50,50))
         self.setText(text)
+        self.setStyleSheet("""
+                             QToolButton:checked {background:#8a8a8a;}  
+                          """)
 
     def change_style_mode(self,iconName):
         # detect dark or not
@@ -940,7 +941,7 @@ class InfoBarToggleButton(QToolButton):
         else:
             self.setIcon(QIcon("imgs/icons/Infobar/light/" + iconName))
 
-class InfoBarGroupBoc(QGroupBox):
+class InfoBarGroupBox(QGroupBox):
     def __init__(self, title):
         super().__init__(title)
 

@@ -11,7 +11,7 @@ from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence, QPixmap, QIcon
 import pyqtgraph as pg
 from ECG_controller import ECG_controller
 
-from widgets import EcgPlot, HeartRatePlot, InfoBarToggleButton
+from widgets import EcgPlot, HeartRatePlot, InfoBarButton, InfoBarGroupBox
 import darkdetect
 
 
@@ -91,52 +91,52 @@ class TonaFlow(QMainWindow):
         
         ### Control Groups for checkboxes and options
         ## View Controls
-        view_controls_groupbox = QGroupBox("ECG View")
+        view_controls_groupbox = InfoBarGroupBox("ECG View")
         view_controls_layout = QHBoxLayout()
 
         # View filtered signal toggle button
-        self.show_filtered_signal_toggle = InfoBarToggleButton("showfiltered.svg", text="Show Filtered \n ECG Signal")
+        self.show_filtered_signal_toggle = InfoBarButton("showfiltered.svg", text="Show Filtered \n ECG Signal", istoggle = True)
         view_controls_layout.addWidget(self.show_filtered_signal_toggle)
 
         # Show Partial Calculation
-        self.show_partial_calc_toggle = InfoBarToggleButton("showpartialcalc.svg", text="Show Partial \n Calculation")
+        self.show_partial_calc_toggle = InfoBarButton("showpartialcalc.svg", text="Show Partial \n Calculation", istoggle = True)
         view_controls_layout.addWidget(self.show_partial_calc_toggle)
 
         # Show ECG Sampling Points
-        self.show_sampling_points_toggle = InfoBarToggleButton("samplingpoints.svg", text="Show ECG \n Samples")
+        self.show_sampling_points_toggle = InfoBarButton("samplingpoints.svg", text="Show ECG \n Samples", istoggle = True)
         view_controls_layout.addWidget(self.show_sampling_points_toggle)
 
         # Show removed heartbeats checkbox 
-        self.show_removed_heartbeats_toggle = InfoBarToggleButton("removedbeats.svg",text="Show Removed \n Heartbeats")
+        self.show_removed_heartbeats_toggle = InfoBarButton("removedbeats.svg",text="Show Removed \n Heartbeats", istoggle = True)
         view_controls_layout.addWidget(self.show_removed_heartbeats_toggle)
 
-        # Finally set as the layout for the groupbox
-        view_controls_groupbox.setStyleSheet("""
-                            QGroupBox {
-                                border: 1px solid #d6d6d6;
-                                border-radius: 6px;
-                                margin-top: 18px; /* space for title */
-                                background-color: #242423;
-                            }
 
-                            /* Title styling */
-                                 QGroupBox::title {
-                                subcontrol-origin: margin;
-                                subcontrol-position: top left;
-                                padding: 2px 10px;
-                                margin-left: 8px;
-
-                                font-size: 11px;
-                                font-weight: 600;
-                                color: #ffffff;
-
-                                background-color: #242423;
-                            }
-                                """)
         view_controls_groupbox.setLayout(view_controls_layout)
-
+        container_layout.addSpacing(100)
         # Add to the container layout for the infobar
         container_layout.addWidget(view_controls_groupbox)
+
+        
+
+
+        ## ECG Controls
+        ECG_controls_groupbox = InfoBarGroupBox("ECG Controls")
+        ECG_controls_layout = QHBoxLayout()
+
+        ECG_controls_groupbox.setLayout(ECG_controls_layout)
+        self.add_heartbeat_button = InfoBarButton("addheartbeat.svg",text="Add Heartbeat", istoggle = False)
+        ECG_controls_layout.addWidget(self.add_heartbeat_button)
+
+        self.remove_heartbeat_button = InfoBarButton("removeheartbeat.svg",text = "Remove Heartbeat", istoggle = False)
+        ECG_controls_layout.addWidget(self.remove_heartbeat_button)
+
+        self.insert_removal_region = InfoBarButton("insertremovalregion.svg",text = "Insert Removal \n Region", istoggle = False)
+        ECG_controls_layout.addWidget(self.insert_removal_region)
+        
+        
+        container_layout.addWidget(ECG_controls_groupbox)
+
+
         container_layout.addStretch()
         ### Finally, add to the main layout
         mainlayout.addWidget(container_frame) 
@@ -147,27 +147,27 @@ class TonaFlow(QMainWindow):
         container_frame = QFrame()
         container_layout = QVBoxLayout(container_frame)
 
-        #### First create and add a toolbar
-        toolbar_layout = QHBoxLayout()
+        # #### First create and add a toolbar
+        # toolbar_layout = QHBoxLayout()
 
-        # Create all the buttons.
-        self.addHeartBeat_btn = QPushButton(icon=QIcon("imgs/icons/plus-2.svg"))
-        self.addHeartBeat_btn.setToolTip("Add Heart Beat")
-        self.remHeartBeat_btn = QPushButton(icon=QIcon("imgs/icons/minus.svg"))
-        self.remHeartBeat_btn.setToolTip("Remove Heart Beat")
-        self.addRemovalRegion_btn = QPushButton(icon=QIcon("imgs/icons/row-remove.svg"))
-        self.addRemovalRegion_btn.setToolTip("Add Removal Region")
-        # Add buttons to layout
-        toolbar_layout.addWidget(self.addHeartBeat_btn)
-        toolbar_layout.addWidget(self.remHeartBeat_btn)
-        toolbar_layout.addWidget(self.addRemovalRegion_btn)
+        # # Create all the buttons.
+        # self.addHeartBeat_btn = QPushButton(icon=QIcon("imgs/icons/plus-2.svg"))
+        # self.addHeartBeat_btn.setToolTip("Add Heart Beat")
+        # self.remHeartBeat_btn = QPushButton(icon=QIcon("imgs/icons/minus.svg"))
+        # self.remHeartBeat_btn.setToolTip("Remove Heart Beat")
+        # self.addRemovalRegion_btn = QPushButton(icon=QIcon("imgs/icons/row-remove.svg"))
+        # self.addRemovalRegion_btn.setToolTip("Add Removal Region")
+        # # Add buttons to layout
+        # toolbar_layout.addWidget(self.addHeartBeat_btn)
+        # toolbar_layout.addWidget(self.remHeartBeat_btn)
+        # toolbar_layout.addWidget(self.addRemovalRegion_btn)
 
     
 
-        # Set params
-        toolbar_layout.addStretch()
-        toolbar_layout.setContentsMargins(45,0,0,0)
-        container_layout.addLayout(toolbar_layout)
+        # # Set params
+        # toolbar_layout.addStretch()
+        # toolbar_layout.setContentsMargins(45,0,0,0)
+        # container_layout.addLayout(toolbar_layout)
         
         #### Plots
         # Add the ECG Axis to the plot layout
@@ -185,6 +185,9 @@ class TonaFlow(QMainWindow):
 
         # Finally we add the frame to the layout.
         mainlayout.addWidget(container_frame)
+
+        # Last thing actually - need to connect the plots together so they are linked on the X axis
+        self.HR_Axis.setXLink(self.ECG_Axis)
 
     def setup_menubar(self,mainlayout):
         menubar = self.menuBar()
@@ -232,7 +235,7 @@ class TonaFlow(QMainWindow):
         pass
     ## ECG...
     def beat_detection_action_clicked(self):
-        pass
+        self.controller.open_beat_detection()
     def cwt_bandpass_action_clicked(self):
         self.controller.open_filter_ecg()
     ## Help...

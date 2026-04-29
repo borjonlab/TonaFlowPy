@@ -64,7 +64,7 @@ class ECG_controller(QObject):
             # self.ecg.splice_ECG(self.removal_regions["region"])
             self.ecg.splice_ECG(self.get_removal_regions())
             self.ecg.calculate_heart_rate()
-        self.parent.hr_graph.heart_rate_line.setData(self.ecg.HeartRate_X, self.ecg.HeartRate_Y)
+        self.parent.HR_Axis.heart_rate_line.setData(self.ecg.HeartRate_X, self.ecg.HeartRate_Y)
 
     def add_heartbeat(self):
         # Get the current selection for the plot
