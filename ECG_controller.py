@@ -81,8 +81,6 @@ class ECG_controller(QObject):
                     self.parent.HR_Axis.partial_calculation_heart_rate_end.setData(endx,endy)
 
 
-        
-
     def update_heartrate_plot(self):
         if self.removal_regions is not None:
             # self.ecg.splice_ECG(self.removal_regions["region"])

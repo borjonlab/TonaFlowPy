@@ -645,8 +645,10 @@ class EcgPlot(pg.PlotWidget):
         self.filt_line.sigPointsClicked.connect(self.select)
         self.heartbeats_line.sigPointsClicked.connect(self.select)
         self.point_selector.sigPointsClicked.connect(self.select)
+
     def setup_keyboard_events(self):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
     def keyPressEvent(self, event: QKeyEvent):
         view_box = self.getViewBox()
         if view_box is None:

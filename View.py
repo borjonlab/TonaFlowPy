@@ -6,13 +6,14 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QSize
 
-from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence, QPixmap, QIcon
+from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence, QPixmap, QIcon, QShortcut
 
 import pyqtgraph as pg
 from ECG_controller import ECG_controller
 
 from widgets import EcgPlot, HeartRatePlot, InfoBarButton, InfoBarGroupBox
 import darkdetect
+
 
 
 
@@ -28,6 +29,8 @@ class TonaFlow(QMainWindow):
         self.setup_ui()
         # Setup the button events/functions
         self.setup_events()
+        # Setup keyboard shortcuts
+        self.setup_keyboard_shortcuts()
         # Detect the system theme so we can apply the right logo and stylesheet.
         self.detect_os_theme()
 
@@ -230,7 +233,7 @@ class TonaFlow(QMainWindow):
     def load_ecg_action_clicked(self):
         self.controller.load_data()
     def export_data_action_clicked(self):
-        pass
+        self.controller.export_csv()
     ## ECG...
     def beat_detection_action_clicked(self):
         self.controller.open_beat_detection()
@@ -265,6 +268,22 @@ class TonaFlow(QMainWindow):
         self.show_partial_calc_toggle.clicked.connect(
             self.controller.show_partial_calc_toggled
         )
+
+    def setup_keyboard_shortcuts(self):
+        self.shortcut_add_heartbeat = QShortcut(QKeySequence('Ctrl+A'),self)
+        self.shortcut_add_heartbeat.activated.connect(self.controller.add_heartbeat)
+
+        self.shortcut_remove_heartbeat = QShortcut(QKeySequence('Ctrl+R'),self)
+        self.shortcut_remove_heartbeat.activated.connect(self.controller.remove_heartbeat)
+
+        self.shortcut_insert_removal_region = QShortcut(QKeySequence('Ctrl+I'),self)
+        self.shortcut_insert_removal_region.activated.connect(self.controller.insert_removal_region)
+
+        self.shortcut_load_ecg = QShortcut(QKeySequence('Ctrl+N'),self)
+        self.shortcut_load_ecg.activated.connect(self.controller.load_data)
+
+        self.shortcut_export_ecg = QShortcut(QKeySequence('Ctrl+E'),self)
+        self.shortcut_load_ecg.activated.connect(self.controller.export_csv)
 
 
 def main():
