@@ -104,6 +104,7 @@ class TonaFlow(QMainWindow):
 
         # Show Partial Calculation
         self.show_partial_calc_toggle = InfoBarButton("showpartialcalc.svg", text="Show Partial \n Calculation", istoggle = True)
+        self.show_partial_calc_toggle.setChecked(True)
         view_controls_layout.addWidget(self.show_partial_calc_toggle)
 
 

@@ -198,12 +198,17 @@ class ECG_controller(QObject):
 
     def run_BD_preview(self, settings: dict):
         self.ecg.detect_heart_beats(threshold_percentile=settings["percentile"],
-                                    threshold_window=settings["window"]
+                                    threshold_window=settings["window"],
+                                    use_abs=settings["use_abs"]
                                     )
         self.plot_BD_preview()
 
     def plot_BD_preview(self):
-        self.beatwindow.ECG_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
+        settings = self.beatwindow.get_all_settings()
+        if settings["use_abs"] == True:
+            self.beatwindow.ECG_line.setData(self.ecg.X_Data(),np.abs(self.ecg.Y_Data()))
+        else:
+            self.beatwindow.ECG_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
         self.beatwindow.threshold_line.setData(self.ecg.Thresholds_X, self.ecg.Thresholds)
 
 

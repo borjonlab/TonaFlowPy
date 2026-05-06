@@ -75,7 +75,7 @@ class BeatDetectionWindow(QWidget):
         self.percentile_input.editingFinished.connect(self.emit_settings)
         self.abs_check.stateChanged.connect(self.emit_settings)
         self.conv_win_input.textChanged.connect(self.emit_settings)
-        self.psize_input.textChanged.connect(self.emit_settings)
+        
 
     def emit_settings(self):
         """Collect current settings and emit as dict"""
@@ -234,7 +234,7 @@ class BeatDetectionWindow(QWidget):
         thresh_box_layout.addLayout(perc_layout)
 
         self.abs_check = QCheckBox("Use Absolute Value")
-        self.abs_check.setChecked(True)
+        self.abs_check.setChecked(False)
         thresh_box_layout.addWidget(self.abs_check)
 
         thresh_box.setLayout(thresh_box_layout)
@@ -256,21 +256,6 @@ class BeatDetectionWindow(QWidget):
         hr_calc_box.setLayout(hr_calc_layout)
         control_layout.addWidget(hr_calc_box)
 
-        # Preview Settings Group
-        prev_group = QGroupBox("Preview Settings")
-        prev_layout = QVBoxLayout()
-
-        psize_layout = QHBoxLayout()
-        psize_label = QLabel("Preview Size (Seconds):")
-        psize_label.setStyleSheet("min-width: 150px;")
-        psize_layout.addWidget(psize_label)
-        self.psize_input = QLineEdit("1.0")
-        self.psize_input.setMaximumWidth(100)
-        psize_layout.addWidget(self.psize_input)
-        prev_layout.addLayout(psize_layout)
-
-        prev_group.setLayout(prev_layout)
-        control_layout.addWidget(prev_group)
 
         # Action buttons
         button_layout = QHBoxLayout()
@@ -305,7 +290,7 @@ class BeatDetectionWindow(QWidget):
         self.ecg_display.setLabel('left', 'Amplitude')
         self.ecg_display.setLabel('bottom', 'Time (s)')
         self.ecg_display.showGrid(x=True, y=True, alpha=0.3)
-        self.ecg_display.setBackground('#1A252F')
+        self.ecg_display.setBackground('#252525')
 
         # Heart Rate Preview plot
         # self.hr_display = pg.PlotWidget()
@@ -328,8 +313,7 @@ class BeatDetectionWindow(QWidget):
             "window": float(self.window_input.text()),
             "percentile": float(self.percentile_input.text()),
             "use_abs": self.abs_check.isChecked(),
-            "conv_win": int(self.conv_win_input.text()),
-            "preview_size": float(self.psize_input.text())
+            "conv_win": int(self.conv_win_input.text())
         }
         return settings
 
@@ -393,17 +377,10 @@ class FilteringWindow(QWidget):
         ## Filter Plot
         self.ECG_line = pg.PlotDataItem(name = "Raw ECG")
         self.filtered_ecg_line = pg.PlotDataItem(pen = filtpen, name = "Filtered ECG")
-        ## FFT Plot
-        self.fft_line = pg.PlotDataItem()
-        self.fft_lower_boundaries = pg.LinearRegionItem((0,float(self.cutlower.text())),movable=False)
-        self.fft_upper_boundaries = pg.LinearRegionItem((float(self.cutUpper.text()),30000),movable=False)
 
         self.ecg_display.addItem(self.ECG_line)
         self.ecg_display.addItem(self.filtered_ecg_line)
-        # self.filtered_ecg_display.addItem(self.filtered_ecg_line)
-        self.fft_plot.addItem(self.fft_line)
-        self.fft_plot.addItem(self.fft_lower_boundaries)
-        self.fft_plot.addItem(self.fft_upper_boundaries)
+
 
     def applyStyles(self):
         self.setStyleSheet("""
@@ -476,10 +453,6 @@ class FilteringWindow(QWidget):
         filter_box = QGroupBox("Filter Settings")
         filter_layout = QVBoxLayout(filter_box)
 
-        # self.filterType = QComboBox()
-        # self.filterType.addItems(["Low-pass", "High-pass", "Band-pass", "Band-stop"])
-        # filter_layout.addWidget(QLabel("Filter Type"))
-        # filter_layout.addWidget(self.filterType)
 
         self.cutlower = QLineEdit("30")
         self.cutUpper = QLineEdit("40")
@@ -517,7 +490,7 @@ class FilteringWindow(QWidget):
         self.ecg_display.setLabel('left', 'Amplitude')
         self.ecg_display.setLabel('bottom', 'Time (s)')
         self.ecg_display.showGrid(x=True, y=True, alpha=0.3)
-        self.ecg_display.setBackground('#1A252F')
+        self.ecg_display.setBackground("#252525")
         leg = self.ecg_display.addLegend()
         
         # self.filtered_ecg_display = pg.PlotWidget(title="Filtered ECG")
@@ -529,15 +502,9 @@ class FilteringWindow(QWidget):
         left_graph_layout.addWidget(self.ecg_display)
         # left_graph_layout.addWidget(self.filtered_ecg_display)
 
-        # Right graph (third plot)
-        self.fft_plot = pg.PlotWidget(title="FFT")
-        self.fft_plot.setLabel('left', 'Power')
-        self.fft_plot.setLabel('bottom', 'Frequency (Hz)')
-        self.fft_plot.showGrid(x=True, y=True, alpha=0.3)
-        self.fft_plot.setBackground('#1A252F')
 
         graph_layout.addLayout(left_graph_layout, stretch=2)
-        graph_layout.addWidget(self.fft_plot, stretch=1)
+
 
 
 
@@ -563,7 +530,6 @@ class FilteringWindow(QWidget):
             if ecg and ecg.X_Data is not None and ecg.Y_Data is not None:
                 self.ECG_line.setData(ecg.X_Data, ecg.Y_Data)
                 self.filtered_ecg_line.setData(ecg.X_Data, ecg.Y_Data)
-                self.fft_plot.setData(ecg.fft_xf, ecg.fft_yy)
 
     def showEvent(self, event):
         super().showEvent(event)

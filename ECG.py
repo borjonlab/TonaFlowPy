@@ -116,15 +116,14 @@ class ECG:
 
 
     def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=97.5, threshold_window=1,
-                           merge_window=20):
+                           merge_window=20, use_abs = False):
         if method == 'dynamicThreshold':
-            ###### TEMPORARY DECS
-            # t = self.active_ecg.X_Data
-            # y = self.active_ecg.Y_Data
-            # fs = self.active_ecg.Fs
             t = self.X_Data()
             y = self.Y_Data()
             fs = self.SamplingRate
+
+            if use_abs:
+                y = np.abs(y)
 
             ses_len = t[len(t) - 1] - t[0]  # length of session
             ses_size = len(t)  # Size of session in elements
