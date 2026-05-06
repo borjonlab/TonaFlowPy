@@ -606,7 +606,7 @@ class EcgPlot(pg.PlotWidget):
     def setup_plot_items(self):
         self.ecg_line = pg.PlotDataItem(symbol='o', pen='g', symbolBrush='g', symbolSize=2.5, width=1)
         self.filt_line = pg.PlotDataItem(symbol='o', pen='w', symbolBrush='w', symbolSize=2.5, width=1)
-        self.heartbeats_line = pg.PlotDataItem(pen='r', symbolPen=None, symbol='o')
+        self.heartbeats_line = pg.PlotDataItem(pen=None, symbolPen=None, symbol='o')
         self.point_selector = self.SelectedPoint(
             symbolPen='w',
             symbolBrush='w',

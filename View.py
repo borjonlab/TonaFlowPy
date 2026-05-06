@@ -103,9 +103,6 @@ class TonaFlow(QMainWindow):
         self.show_partial_calc_toggle = InfoBarButton("showpartialcalc.svg", text="Show Partial \n Calculation", istoggle = True)
         view_controls_layout.addWidget(self.show_partial_calc_toggle)
 
-        # Show ECG Sampling Points
-        self.show_sampling_points_toggle = InfoBarButton("samplingpoints.svg", text="Show ECG \n Samples", istoggle = True)
-        view_controls_layout.addWidget(self.show_sampling_points_toggle)
 
         # Show removed heartbeats checkbox 
         self.show_removed_heartbeats_toggle = InfoBarButton("removedbeats.svg",text="Show Removed \n Heartbeats", istoggle = True)
@@ -268,6 +265,7 @@ class TonaFlow(QMainWindow):
         self.show_partial_calc_toggle.clicked.connect(
             self.controller.show_partial_calc_toggled
         )
+
 
 def main():
 

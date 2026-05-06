@@ -162,32 +162,9 @@ class ECG_controller(QObject):
             self.parent.HR_Axis.partial_calculation_heart_rate_end.setVisible(False)
             self.parent.ECG_Axis.partial_calculation_region_beg.setVisible(False)
             self.parent.ECG_Axis.partial_calculation_region_end.setVisible(False)
-        # brush = self.parent.ECG_Axis.partial_calculation_region_beg.brush
-        # pen = self.parent.HR_Axis.partial_calculation_heart_rate_beg.opts['pen']
-        # if togglestatus == 1:
-        #     brushcolor = brush.color()
-        #     pencolor = pen.color()
-
-        #     brushcolor.setAlpha(125)
-        #     pencolor.setAlpha(255)
-
-        #     newbrush = pg.mkBrush(color=brushcolor)
-        #     newpen = pg.mkPen(color=pencolor)
-        # else:
-        #     brushcolor = brush.color()
-        #     pencolor = pen.color()
-
-        #     brushcolor.setAlpha(0)
-        #     pencolor.setAlpha(0)
-
-        #     newbrush = pg.mkBrush(color=brushcolor)
-        #     newpen = pg.mkPen(color=pencolor,width=8)
-        # self.parent.HR_Axis.partial_calculation_heart_rate_beg.setPen(newpen)
-        # self.parent.HR_Axis.partial_calculation_heart_rate_end.setPen(newpen)
-        # self.parent.ECG_Axis.partial_calculation_region_beg.setBrush(newbrush)
-        # self.parent.ECG_Axis.partial_calculation_region_end.setBrush(newbrush)
         # Force redraw
         self.parent.ECG_Axis.repaint()
+
 
     def remove_removal_region(self, region: RemovalRegion):
         # Remove from plot
