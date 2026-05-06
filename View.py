@@ -26,7 +26,8 @@ class TonaFlow(QMainWindow):
         self.setWindowTitle("TonaFlow")
         self.setGeometry(100, 100, 1800, 720)
         self.setup_ui()
-
+        # Setup the button events/functions
+        self.setup_events()
         # Detect the system theme so we can apply the right logo and stylesheet.
         self.detect_os_theme()
 
@@ -130,8 +131,8 @@ class TonaFlow(QMainWindow):
         self.remove_heartbeat_button = InfoBarButton("removeheartbeat.svg",text = "Remove Heartbeat", istoggle = False)
         ECG_controls_layout.addWidget(self.remove_heartbeat_button)
 
-        self.insert_removal_region = InfoBarButton("insertremovalregion.svg",text = "Insert Removal \n Region", istoggle = False)
-        ECG_controls_layout.addWidget(self.insert_removal_region)
+        self.insert_removal_region_button = InfoBarButton("insertremovalregion.svg",text = "Insert Removal \n Region", istoggle = False)
+        ECG_controls_layout.addWidget(self.insert_removal_region_button)
         
         
         container_layout.addWidget(ECG_controls_groupbox)
@@ -244,7 +245,29 @@ class TonaFlow(QMainWindow):
     def about_action_clicked(self):
         self.controller.open_about_window()
     
+    
 
+
+    ### Setup the events for buttons and such 
+    def setup_events(self):
+        ## ECG Controls
+        self.add_heartbeat_button.clicked.connect(
+            self.controller.add_heartbeat
+        )
+        self.remove_heartbeat_button.clicked.connect(
+            self.controller.remove_heartbeat
+        )
+        self.insert_removal_region_button.clicked.connect(
+            self.controller.insert_removal_region
+        )
+
+        ## ECG View
+        self.show_filtered_signal_toggle.clicked.connect(
+            self.controller.show_filtered_signal_toggled
+        )
+        self.show_partial_calc_toggle.clicked.connect(
+            self.controller.show_partial_calc_toggled
+        )
 
 def main():
 

@@ -613,6 +613,11 @@ class EcgPlot(pg.PlotWidget):
             symbol='o',
             symbolSize=15
         )
+
+        partial_brush = pg.mkBrush(color=(180,0,255,125))
+        self.partial_calculation_region_beg = pg.LinearRegionItem(values=(0,0),orientation='vertical',brush=partial_brush,pen=pg.mkPen(color=(0,0,0,0)),movable=False)
+        self.partial_calculation_region_end = pg.LinearRegionItem(values=(0,0),orientation='vertical',brush=partial_brush,pen=pg.mkPen(color=(0,0,0,0)),movable=False)
+
         self.coord_label = pg.TextItem(text='', color='w', anchor=(0.5, 1))
         self.coord_label.hide()
         self.point_selector.set_parent_plot(self)
@@ -622,6 +627,9 @@ class EcgPlot(pg.PlotWidget):
         self.addItem(self.heartbeats_line)
         self.addItem(self.point_selector)
         self.addItem(self.coord_label)
+        self.addItem(self.partial_calculation_region_beg)
+        self.addItem(self.partial_calculation_region_end)
+
 
         # Set downsampling and cliptoview to true for performances
         self.ecg_line.setDownsampling(auto=True)
@@ -634,6 +642,7 @@ class EcgPlot(pg.PlotWidget):
     def setup_mouse_events(self):
         # self.scene().sigMouseClicked.connect(self.mouse_clicked)
         self.ecg_line.sigPointsClicked.connect(self.select)
+        self.filt_line.sigPointsClicked.connect(self.select)
         self.heartbeats_line.sigPointsClicked.connect(self.select)
         self.point_selector.sigPointsClicked.connect(self.select)
     def setup_keyboard_events(self):
@@ -669,13 +678,20 @@ class EcgPlot(pg.PlotWidget):
         if len(self.ecg_line.xData) == 0 or len(self.ecg_line.yData) == 0:
             return
         xp, yp = pts[0].pos()
+
+        # Is the signal filtered? If so, we use the filt_line. If not, use ecg_line
+        if self.filt_line.xData is not None:
+            line = self.filt_line
+        else:
+            line = self.ecg_line
         if self.point_selector.current_selection is not None:
             if xp == self.point_selector.current_selection[0]:
                 self.point_selector.deselectPoint()
             else:
-                self.point_selector.setPoint(self.ecg_line.xData, self.ecg_line.yData, xp, yp)
+                self.point_selector.setPoint(line.xData, line.yData, xp, yp)
         elif self.point_selector.current_selection is None:
-            self.point_selector.setPoint(self.ecg_line.xData, self.ecg_line.yData, xp, yp)
+            self.point_selector.setPoint(line.xData, line.yData, xp, yp)
+
     class SelectedPoint(pg.PlotDataItem):
         def __init__(self, *args, **kargs):
             super().__init__(*args, **kargs)
@@ -713,6 +729,7 @@ class EcgPlot(pg.PlotWidget):
                     self.parent_plot.coord_label.setPos(x, y)
                 self.parent_plot.coord_label.setAnchor((0.5, 1))
                 self.parent_plot.coord_label.show()
+
         def deselectPoint(self):
             self.current_selection = (None, None, None)
             self.setData([], [])
@@ -743,7 +760,13 @@ class HeartRatePlot(pg.PlotWidget):
 
     def setup_plot_items(self):
         self.heart_rate_line = pg.PlotDataItem(pen='r')
+        partial_pen = pg.mkPen(color=(180,0,255,125),width=8)
+        self.partial_calculation_heart_rate_beg = pg.PlotDataItem(pen = partial_pen,symbolPen = None,symbol=None,width=3)
+        self.partial_calculation_heart_rate_end = pg.PlotDataItem(pen = partial_pen,symbolPen = None,symbol=None,width=3)
         self.addItem(self.heart_rate_line)
+        self.addItem(self.partial_calculation_heart_rate_beg)
+        self.addItem(self.partial_calculation_heart_rate_end)
+
     
     def setup_labels(self):
         self.setLabel('left', 'Heart Rate', units='BPM')

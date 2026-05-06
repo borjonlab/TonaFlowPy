@@ -40,6 +40,9 @@ class ECG:
         self.fft_xf = None
         self.fft_yy = None
 
+        # Detection settings
+        self.det_settings = None
+
     # Setup Functions
     def estimate_sampling_rate(self):
         return 1 / np.mean(np.diff(self.X_Data()))
