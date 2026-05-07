@@ -5,7 +5,7 @@
     <img alt="TonaFlow logo" src="imgs/logos/TonaFlow_LightMode.png" width="1020">
   </picture>
 
-  <h1><strong>A free, open-source program for ECG processing</strong></h2>
+  <h1><strong>A free and open-source program for ECG processing</strong></h2>
 
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   [![Download](https://img.shields.io/badge/Download-Latest_Release-brightgreen)](https://github.com/borjonlab/TonaFlowPy/releases/tag/Latest)
