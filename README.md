@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="imgs/logos/TonaFlow_DarkMode.png">
     <source media="(prefers-color-scheme: light)" srcset="imgs/logos/TonaFlow_LightMode.png">
-    <img alt="TonaFlow logo" src="imgs/logos/TonaFlow_DarkMode.png" width="1020">
+    <img alt="TonaFlow logo" src="imgs/logos/TonaFlow_LightMode.png" width="1020">
   </picture>
 
   <h1><strong>A free, open-source program for ECG processing</strong></h2>
