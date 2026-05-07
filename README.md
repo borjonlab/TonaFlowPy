@@ -12,6 +12,7 @@
   <p>
     Manash Sahoo<sup>1,2</sup> &nbsp;·&nbsp;
     Katherine D. Rhodes<sup>1,2</sup> &nbsp;·&nbsp;
+    Valerie P. Bambha<sup>1,2</sup> &nbsp;·&nbsp;
     Natasha Mbajonas &nbsp;·&nbsp;
     Jeremy I. Borjon<sup>1,2,3,4</sup>
   </p>
