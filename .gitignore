@@ -1,2 +1,5 @@
 venv/
 /pycache/
+/build/
+/dist/
+.DS_Store

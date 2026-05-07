@@ -42,7 +42,6 @@ TonaFlow is easy to install! We provide both portable executables (.exe / .dmg) 
 ## Executables
 
 ## Building from Source
-
 ```
 # Clone the repo.
 git clone https://github.com/borjonlab/TonaFlowPy.git

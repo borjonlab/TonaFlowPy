@@ -1,0 +1,71 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+
+a = Analysis(
+    ['TonaFlow.py'],
+    pathex=[],
+    binaries=[],
+    datas=[('imgs/.DS_Store', 'imgs'),
+ ('imgs/TF.ico', 'imgs'),
+ ('imgs/TF Logo Darkmode.png', 'imgs'),
+ ('imgs/logos/TonaFlow_DarkMode.png', 'imgs/logos'),
+ ('imgs/logos/TonaFlow_LightMode.png', 'imgs/logos'),
+ ('imgs/icons/plus-2.svg', 'imgs/icons'),
+ ('imgs/icons/.DS_Store', 'imgs/icons'),
+ ('imgs/icons/row-remove.svg', 'imgs/icons'),
+ ('imgs/icons/minus.svg', 'imgs/icons'),
+ ('imgs/icons/Infobar/.DS_Store', 'imgs/icons/Infobar'),
+ ('imgs/icons/Infobar/light/removeheartbeat.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/samplingpoints.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/addheartbeat.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/.DS_Store', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/showpartialcalc.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/showfiltered.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/removedbeats.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/light/insertremovalregion.svg', 'imgs/icons/Infobar/light'),
+ ('imgs/icons/Infobar/dark/removeheartbeat.svg', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/samplingpoints.svg', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/addheartbeat.svg', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/.DS_Store', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/showpartialcalc.svg', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/showfiltered.svg', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/removedbeats.svg', 'imgs/icons/Infobar/dark'),
+ ('imgs/icons/Infobar/dark/insertremovalregion.svg', 'imgs/icons/Infobar/dark')],
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+    optimize=0,
+)
+pyz = PYZ(a.pure)
+
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name='TonaFlow',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
+
+app = BUNDLE(
+    exe,
+    name='TonaFlow.app',
+    icon='imgs/TF.ico',
+    bundle_identifier=None,
+)
