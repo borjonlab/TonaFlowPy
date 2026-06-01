@@ -212,6 +212,9 @@ class TonaFlow(QMainWindow):
         # Open Project File
         open_project_file_action = filemenu.addAction("Open Project File (.Flow)")
         open_project_file_action.triggered.connect(self.open_project_file_action_clicked)
+        # Open Settings Window
+        open_settings_window_action = filemenu.addAction("Preferences / Settings")
+        open_settings_window_action.triggered.connect(self.open_settings_window_action_clicked)
 
         ## Add actions for ecgmenu...
         beat_detection_action = ecgmenu.addAction("Beat Detection")
@@ -236,6 +239,8 @@ class TonaFlow(QMainWindow):
         self.controller.load_data()
     def export_data_action_clicked(self):
         self.controller.export_csv()
+    def open_settings_window_action_clicked(self):
+        self.controller.open_settings_window()
     ## ECG...
     def beat_detection_action_clicked(self):
         self.controller.open_beat_detection()

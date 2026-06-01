@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 import pandas as pd
 import numpy as np
 
-from widgets import BeatDetectionWindow, FilteringWindow, RemovalRegion, AboutWindow
+from widgets import BeatDetectionWindow, FilteringWindow, RemovalRegion, AboutWindow, SettingsWindow
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 import scipy
@@ -224,7 +224,6 @@ class ECG_controller(QObject):
         self.filterwindow.settingsChanged.connect(self.plot_ecg_filt_preview)
         self.filterwindow.run_analysis
         self.plot_filt_preview()
-        self.plot_fft_preview()
         self.plot_ecg_filt_preview({'low_cutoff':1,'high_cutoff':self.ecg.SamplingRate/2 -1})
         # Set the textboxes to default values
         self.filterwindow.cutlower.setText("1")
@@ -232,17 +231,6 @@ class ECG_controller(QObject):
 
     def plot_filt_preview(self):
         self.filterwindow.ECG_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
-
-    def plot_fft_preview(self):
-        self.ecg.calculate_fft()
-        self.filterwindow.fft_line.setData(self.ecg.fft_xf,self.ecg.fft_yy)
-        #calculate y lim range, we will do everything from 0.023 on because there is a large spike @ 0 
-        up = np.max(self.ecg.fft_yy[3:])
-        lo = np.min(self.ecg.fft_yy[3:])
-        self.filterwindow.fft_plot.setYRange(lo,up)
-        self.filterwindow.fft_plot.setXRange(np.min(self.ecg.fft_xf),np.max(self.ecg.fft_xf))
-        # Update the lines for the filter boundaries in the FFT Plot 
-        
 
 
     def run_filter(self, settings: dict):
@@ -252,8 +240,6 @@ class ECG_controller(QObject):
 
     def plot_ecg_filt_preview(self, settings: dict):
         filtecg = self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'])
-        self.filterwindow.fft_lower_boundaries.setRegion((0,settings['low_cutoff']))
-        self.filterwindow.fft_upper_boundaries.setRegion((settings['high_cutoff'],self.ecg.SamplingRate/2 -1))
         self.filterwindow.filtered_ecg_line.setData(self.ecg.X_Data(),filtecg)
 
 
@@ -296,5 +282,8 @@ class ECG_controller(QObject):
         self.win.show()
         self.win.center_on_parent()
 
+    def open_settings_window(self):
+        self.settings_win = SettingsWindow(self.parent)
+        self.settings_win.show()
 
 
