@@ -341,6 +341,7 @@ class FilteringWindow(QWidget):
     analysisRun = pyqtSignal(dict)
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.parent = parent
         self.setWindowTitle("ECG Filter Settings")
@@ -983,3 +984,198 @@ class InfoBarGroupBox(QGroupBox):
                                 background-color: #242423;
                             }
                             """)
+            
+
+
+class SettingsWindow(QWidget):
+
+    colorsChanged = pyqtSignal(dict)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.parent = parent
+
+        self.setWindowTitle("Display Settings")
+        self.setGeometry(200, 200, 400, 350)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
+        self.colors = {
+            "ecg_line": "#FFFFFF",
+            "heartbeat_marker": "#00FF00",
+            "heart_rate_line": "#FFFF00",
+            "filtered_ecg_line": "#FF0000"
+        }
+
+        self.setup_ui()
+        self.applyStyles()
+
+    def setup_ui(self):
+
+        main_layout = QVBoxLayout(self)
+
+        # Main Frame
+        frame = QFrame()
+        frame.setObjectName("mainFrame")
+
+        frame_layout = QVBoxLayout(frame)
+
+        # Close Button
+        close_btn = QPushButton("✕")
+        close_btn.setFixedWidth(40)
+        close_btn.clicked.connect(self.close)
+
+        frame_layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignRight)
+
+        # Header
+        header = QLabel("Display Settings")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setStyleSheet("""
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+        """)
+
+        frame_layout.addWidget(header)
+
+        # Group Box
+        display_box = QGroupBox("Plot Colors")
+        display_layout = QVBoxLayout(display_box)
+
+        # Color Buttons
+        self.ecg_btn = self.create_color_row(
+            "ECG Line",
+            "ecg_line"
+        )
+
+        self.beat_btn = self.create_color_row(
+            "Heart Beat Marker",
+            "heartbeat_marker"
+        )
+
+        self.hr_btn = self.create_color_row(
+            "Heart Rate Line",
+            "heart_rate_line"
+        )
+
+        self.filtered_btn = self.create_color_row(
+            "Filtered ECG Line",
+            "filtered_ecg_line"
+        )
+
+        display_layout.addWidget(self.ecg_btn)
+        display_layout.addWidget(self.beat_btn)
+        display_layout.addWidget(self.hr_btn)
+        display_layout.addWidget(self.filtered_btn)
+
+        frame_layout.addWidget(display_box)
+
+        frame_layout.addStretch()
+
+        main_layout.addWidget(frame)
+
+    def create_color_row(self, text, key):
+
+        row_widget = QWidget()
+        row_layout = QHBoxLayout(row_widget)
+
+        label = QLabel(text)
+
+        color_button = QPushButton()
+        color_button.setFixedSize(50, 28)
+
+        self.update_button_color(color_button, self.colors[key])
+
+        color_button.clicked.connect(
+            lambda: self.pick_color(key, color_button)
+        )
+
+        row_layout.addWidget(label)
+        row_layout.addStretch()
+        row_layout.addWidget(color_button)
+
+        return row_widget
+
+    def pick_color(self, key, button):
+
+        current = QColor(self.colors[key])
+
+        color = QColorDialog.getColor(current, self)
+
+        if color.isValid():
+
+            self.colors[key] = color.name()
+
+            self.update_button_color(button, color.name())
+
+            self.colorsChanged.emit(self.colors)
+
+    def update_button_color(self, button, color):
+
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color};
+                border: 2px solid #606060;
+                border-radius: 6px;
+            }}
+
+            QPushButton:hover {{
+                border: 2px solid #909090;
+            }}
+        """)
+
+    def applyStyles(self):
+
+        self.setStyleSheet("""
+
+            QWidget {
+                background-color: #1E1E1E;
+                color: white;
+            }
+
+            QFrame#mainFrame {
+                background-color: #2D2D2D;
+                border: 2px solid #404040;
+                border-radius: 12px;
+                padding: 10px;
+            }
+
+            QGroupBox {
+                background-color: #252525;
+                border: 2px solid #404040;
+                border-radius: 10px;
+                margin-top: 12px;
+                padding-top: 15px;
+                font-weight: bold;
+            }
+
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 12px;
+                padding: 0 5px;
+                color: #CCCCCC;
+            }
+
+            QLabel {
+                font-size: 13px;
+                font-weight: bold;
+            }
+
+            QPushButton {
+                background-color: #404040;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px;
+                font-weight: bold;
+            }
+
+            QPushButton:hover {
+                background-color: #505050;
+            }
+
+            QPushButton:pressed {
+                background-color: #303030;
+            }
+
+        """)
