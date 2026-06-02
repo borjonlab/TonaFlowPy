@@ -1,19 +1,21 @@
-from ECG import ECG
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from View import TonaFlow
-
 from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+import pyqtgraph as pg
 import pandas as pd
 import numpy as np
 
-from widgets import BeatDetectionWindow, FilteringWindow, RemovalRegion, AboutWindow, SettingsWindow
-import pyqtgraph as pg
-from PyQt6.QtCore import Qt
-import scipy
+from core.ECG import ECG
+from ui.windows.filtering import FilteringWindow
+from ui.windows.beat_detection import BeatDetectionWindow
+from ui.plots import RemovalRegion
+from ui.windows.about import AboutWindow
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ui.View import TonaFlow
+
+
 
 
 class ECG_controller(QObject):
@@ -283,7 +285,6 @@ class ECG_controller(QObject):
         self.win.center_on_parent()
 
     def open_settings_window(self):
-        self.settings_win = SettingsWindow(self.parent)
-        self.settings_win.show()
+        pass
 
 
