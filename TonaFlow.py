@@ -1,3 +1,3 @@
-from View import main
+from ui.View import main
 if __name__ == '__main__':
     main()

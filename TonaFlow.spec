@@ -6,8 +6,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('imgs/.DS_Store', 'imgs'),
- ('imgs/TF.ico', 'imgs'),
- ('imgs/TF Logo Darkmode.png', 'imgs'),
+ ('imgs/launch_icons/TF.icns', 'imgs/launch_icons'),
+ ('imgs/launch_icons/TF.ico', 'imgs/launch_icons'),
  ('imgs/logos/TonaFlow_DarkMode.png', 'imgs/logos'),
  ('imgs/logos/TonaFlow_LightMode.png', 'imgs/logos'),
  ('imgs/icons/plus-2.svg', 'imgs/icons'),
@@ -30,7 +30,8 @@ a = Analysis(
  ('imgs/icons/Infobar/dark/showpartialcalc.svg', 'imgs/icons/Infobar/dark'),
  ('imgs/icons/Infobar/dark/showfiltered.svg', 'imgs/icons/Infobar/dark'),
  ('imgs/icons/Infobar/dark/removedbeats.svg', 'imgs/icons/Infobar/dark'),
- ('imgs/icons/Infobar/dark/insertremovalregion.svg', 'imgs/icons/Infobar/dark')],
+ ('imgs/icons/Infobar/dark/insertremovalregion.svg', 'imgs/icons/Infobar/dark'),
+ ('configs/configs.ini', 'ssqueezepy/')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -41,31 +42,36 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='TonaFlow',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
+    upx=False,
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon = './imgs/launch_icons/tf.ico'
 )
-
-app = BUNDLE(
+coll = COLLECT(
     exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name='TonaFlow',
+)
+app = BUNDLE(
+    coll,
     name='TonaFlow.app',
-    icon='imgs/TF.ico',
+    icon='./imgs/launch_icons/tf.icns',
     bundle_identifier=None,
 )

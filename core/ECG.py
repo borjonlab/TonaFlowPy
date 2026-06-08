@@ -1,12 +1,12 @@
-import scipy
 import numpy as np
 import pandas as pd
-import argparse
-from matplotlib import pyplot as plt
-from matplotlib import patches
+
 from scipy.signal.windows import gaussian as gausswin
 from scipy.signal import butter, lfilter
-from scipy.fft import fft, fftfreq
+
+from ssqueezepy import cwt, wavelets, Wavelet, icwt
+from ssqueezepy.wavelets import center_frequency
+from ssqueezepy.utils import make_scales
 
 
 class ECG:
@@ -246,10 +246,7 @@ class ECG:
     #     pass
 
     def wavelet_bandpass(self,lowcutoff,highcutoff,set=False):
-        from ssqueezepy import cwt, wavelets, Wavelet, icwt
-        from ssqueezepy.wavelets import center_frequency
-        from ssqueezepy.utils import make_scales, cwt_scalebounds
-        import matplotlib.pyplot as plt
+        
 
         N = len(self.Y_Data())
         fs = self.SamplingRate
@@ -274,88 +271,4 @@ class ECG:
             self.Is_Filtered = True
         else:
             return YRec
-
-
-        # plt.figure()
-        # plt.plot(YRec)
-        # plt.plot(self.Y_Data())
-        # plt.show()
-
-    def calculate_fft(self):
-        xdata = self.X_Data()
-        ydata = self.Y_Data()
-        N = len(xdata)
-        T = 1/self.SamplingRate
-        yf = scipy.fftpack.fft(ydata)
-        xf = np.linspace(0.0,1.0/(2.0*T),N//2)
-        yy = 2.0/N * np.abs(yf[:N//2])
-
-        self.fft_xf = xf
-        self.fft_yy = yy
-        
-        return (xf,yy)
-
-    #     xdata = self.ecg.X_Data
-    #     ydata = self.ecg.Y_Data
-    #     N = len(xdata)
-    #     T = 1/self.ecg.SamplingRate
-    #     yf = scipy.fftpack.fft(ydata)
-    #     xf = np.linspace(0.0, 1.0/(2.0*T), N//2)
-    #     yy = 2.0/N * np.abs(yf[:N//2])
-
-    # Get and Set functions
-    # def get_components(self):
-    #     if self.Active_Version == 'raw':
-    #         return self.X_Data()
-    #     elif self.Active_Version == 'filtered':
-    #         return self.X_Data_Filtered
-
-# # Debug and testing
-
-# e = ECG("ex.csv")
-# e.detect_heart_beats(merge_window=50,threshold_percentile=99)
-# approx_locations =[[0,10000],[40000,220000]]
-# e.splice_ECG(test = True,approximate_locations=approx_locations)
-# e.calculate_heart_rate()
-
-
-# xb = e.X_Data[np.where(e.HeartBeats == 1)]
-# yb = e.Y_Data[np.where(e.HeartBeats == 1)]
-# x = e.X_Data
-# y = e.Y_Data
-# xthr = e.Thresholds_X
-# ythr = e.Thresholds
-
-# yFilt = e.butter_bandpass(2,30,1000)
-
-
-# f = plt.figure()
-# ax1 = plt.subplot(2,1,1)
-# plt.plot(xb,yb,marker='.',markersize=8,markerfacecolor='red',linestyle='None')
-# plt.plot(x,y)
-# plt.plot(xthr,ythr,linestyle='--',color='red')
-# plt.grid(True)
-# plt.legend(["Heartbeats","ECG","Thresholds","Removed Data"])
-
-# for loc in e.SpliceLocations:
-#     x1 = loc[0] / e.SamplingRate
-#     x2 = loc[1] / e. SamplingRate
-#     w = x2-x1
-#     h = np.max(e.Y_Data)
-#     r = patches.Rectangle((x1,np.min(e.Y_Data)),w,h - np.min(e.Y_Data),alpha=.5)
-#     ax1.add_patch(r)
-# # patches.Rectangle((e.SpliceLocations[0][0],e.SpliceLocations[0][1]),5,5)
-
-
-# plt.subplot(2,1,2, sharex= ax1)
-# plt.plot(e.HeartRate_X,e.HeartRate_Y)
-# plt.grid(True)
-# plt.show()
-
-# f2 = plt.figure()
-# for i in np.arange(1,4,1):
-#     yf = e.butter_bandpass(i,499,1000)
-#     plt.plot(yf,alpha = 0.5)
-# plt.legend([f"lo={i}Hz" for i in np.arange(1,10,2)])
-# plt.show()
 

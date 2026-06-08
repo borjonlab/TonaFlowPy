@@ -33,6 +33,8 @@ def build_datas(imgs_dir="imgs"):
 
             datas.append((src, dest))
 
+    # Adding a line to append the ssqueezepy_config.ini, because we need that :(
+    datas.append(('configs/configs.ini', 'ssqueezepy/'))
     return datas
 
 

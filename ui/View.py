@@ -1,20 +1,19 @@
-import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton,
     QCheckBox, QFrame, QFileDialog, QMessageBox, QLineEdit, QGroupBox,
     QHBoxLayout, QGridLayout, QToolBar, QMenuBar, QToolButton
 )
 from PyQt6.QtCore import Qt, QSize
-
 from PyQt6.QtGui import QPalette, QColor, QAction, QKeySequence, QPixmap, QIcon, QShortcut
 
 import pyqtgraph as pg
-from ECG_controller import ECG_controller
 
-from widgets import EcgPlot, HeartRatePlot, InfoBarButton, InfoBarGroupBox
+from core.ECG_controller import ECG_controller
+from ui.plots import EcgPlot, HeartRatePlot
+from ui.infobar import InfoBarButton, InfoBarGroupBox
+
 import darkdetect
-
-from RSP import resource_path
+import sys
 
 
 
@@ -47,7 +46,7 @@ class TonaFlow(QMainWindow):
                                         }
                             """)
             # Change the logo accordingly
-            pixmap = QPixmap(resource_path("imgs/logos/TonaFlow_DarkMode.png"))
+            pixmap = QPixmap("imgs/logos/TonaFlow_DarkMode.png")
             self.LOGO_PIXMAP = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
             self.logolabel.setPixmap(self.LOGO_PIXMAP)
             
@@ -62,7 +61,7 @@ class TonaFlow(QMainWindow):
                                         }
                             """)
             # Change the logo accordingly
-            pixmap = QPixmap(resource_path("imgs/logos/TonaFlow_LightMode.png"))
+            pixmap = QPixmap("imgs/logos/TonaFlow_LightMode.png")
             self.LOGO_PIXMAP = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
             self.logolabel.setPixmap(self.LOGO_PIXMAP)
             # Change the ECG / HR axes as well
@@ -88,7 +87,7 @@ class TonaFlow(QMainWindow):
         container_layout = QHBoxLayout(container_frame)
         container_layout.setContentsMargins(0,0,0,0)
         # Add the logo
-        logo = QPixmap(resource_path("imgs/logos/TonaFlow_DarkMode.png"))
+        logo = QPixmap("imgs/logos/TonaFlow_DarkMode.png")
         logo = logo.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
         self.logolabel = QLabel("")
         self.logolabel.setPixmap(logo)
@@ -212,6 +211,9 @@ class TonaFlow(QMainWindow):
         # Open Project File
         open_project_file_action = filemenu.addAction("Open Project File (.Flow)")
         open_project_file_action.triggered.connect(self.open_project_file_action_clicked)
+        # Open Settings Window
+        open_settings_window_action = filemenu.addAction("Preferences / Settings")
+        open_settings_window_action.triggered.connect(self.open_settings_window_action_clicked)
 
         ## Add actions for ecgmenu...
         beat_detection_action = ecgmenu.addAction("Beat Detection")
@@ -236,6 +238,8 @@ class TonaFlow(QMainWindow):
         self.controller.load_data()
     def export_data_action_clicked(self):
         self.controller.export_csv()
+    def open_settings_window_action_clicked(self):
+        self.controller.open_settings_window()
     ## ECG...
     def beat_detection_action_clicked(self):
         self.controller.open_beat_detection()
