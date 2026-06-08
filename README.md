@@ -8,7 +8,7 @@
   <h1><strong>A free and open-source program for ECG processing</strong></h2>
 
   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-  [![Download](https://img.shields.io/badge/Download-Latest_Release-brightgreen)](https://github.com/borjonlab/TonaFlowPy/releases/tag/Latest)
+  [![Download](https://img.shields.io/badge/Download-Latest_Release-brightgreen)](https://github.com/borjonlab/TonaFlowPy/releases/tag/v0.0.1)
   <p>
     Manash Sahoo<sup>1,2</sup> &nbsp;·&nbsp;
     Katherine D. Rhodes<sup>1,2</sup> &nbsp;·&nbsp;
