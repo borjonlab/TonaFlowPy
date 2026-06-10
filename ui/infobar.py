@@ -10,6 +10,8 @@ import pyqtgraph as pg
 import numpy as np
 import darkdetect
 
+from core.resource_mgmt.rsp import resource_path
+
 
 class InfoBarButton(QToolButton):
     def __init__(self,iconName,text="",istoggle=False):
@@ -26,9 +28,9 @@ class InfoBarButton(QToolButton):
     def change_style_mode(self,iconName):
         # detect dark or not
         if darkdetect.isDark():
-            self.setIcon(QIcon("imgs/icons/Infobar/dark/" + iconName))
+            self.setIcon(QIcon(resource_path("imgs/icons/Infobar/dark/" + iconName)))
         else:
-            self.setIcon(QIcon("imgs/icons/Infobar/light/" + iconName))
+            self.setIcon(QIcon(resource_path("imgs/icons/Infobar/light/" + iconName)))
 
 class InfoBarGroupBox(QGroupBox):
     def __init__(self, title):

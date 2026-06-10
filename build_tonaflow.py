@@ -57,10 +57,14 @@ def update_spec_file(spec_path, datas):
 
     print(f"Updated {spec_path} with {len(datas)} assets.")
 
+def fix_app_sign():
+    print("Updating app signature...")
+    subprocess.run(["xattr", "-cr", "./dist/TonaFlow.app"])
 
 if __name__ == "__main__":
 
     datas = build_datas(IMGS_DIR)
 
     update_spec_file(SPEC_FILE, datas)
-    subprocess.run(["pyinstaller","TonaFlow.spec"])
+    subprocess.run(["pyinstaller","TonaFlow.spec", "--noconfirm"])
+    fix_app_sign()

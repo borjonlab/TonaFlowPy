@@ -15,7 +15,7 @@ from ui.infobar import InfoBarButton, InfoBarGroupBox
 import darkdetect
 import sys
 
-
+from core.resource_mgmt.rsp import resource_path
 
 class TonaFlow(QMainWindow):
     def __init__(self):
@@ -46,7 +46,7 @@ class TonaFlow(QMainWindow):
                                         }
                             """)
             # Change the logo accordingly
-            pixmap = QPixmap("imgs/logos/TonaFlow_DarkMode.png")
+            pixmap = QPixmap(resource_path("imgs/logos/TonaFlow_DarkMode.png"))
             self.LOGO_PIXMAP = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
             self.logolabel.setPixmap(self.LOGO_PIXMAP)
             
@@ -61,7 +61,7 @@ class TonaFlow(QMainWindow):
                                         }
                             """)
             # Change the logo accordingly
-            pixmap = QPixmap("imgs/logos/TonaFlow_LightMode.png")
+            pixmap = QPixmap(resource_path("imgs/logos/TonaFlow_LightMode.png"))
             self.LOGO_PIXMAP = pixmap.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
             self.logolabel.setPixmap(self.LOGO_PIXMAP)
             # Change the ECG / HR axes as well
@@ -87,7 +87,7 @@ class TonaFlow(QMainWindow):
         container_layout = QHBoxLayout(container_frame)
         container_layout.setContentsMargins(0,0,0,0)
         # Add the logo
-        logo = QPixmap("imgs/logos/TonaFlow_DarkMode.png")
+        logo = QPixmap(resource_path("imgs/logos/TonaFlow_DarkMode.png"))
         logo = logo.scaled(300,80,Qt.AspectRatioMode.KeepAspectRatio)
         self.logolabel = QLabel("")
         self.logolabel.setPixmap(logo)
