@@ -32,6 +32,7 @@
 <div align = "center">
 <h2>Note: TonaFlow is currently under development, in <strong>alpha</strong>! Please report any bugs or issues in the "issues" tab!</h2>
 </div>
+
 ## 📖 About
 
 <img src="doc/imgs/Screenshots/TF_Full.png" alt="TonaFlow screenshot">
