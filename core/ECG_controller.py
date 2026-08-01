@@ -39,7 +39,10 @@ class ECG_controller(QObject):
         self.ecg = ECG()  # User loaded data - initialize the ECG. This way when a user loads another file, the ECG class and its properties become a clean slate.
         file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open CSV", "", "CSV Files (*.csv)")
         success = self.ecg.read_csv(file_path)
-        self.dataLoaded.emit(success)
+        if success != 0:
+            self.dataLoaded.emit(success)
+        else:
+            QMessageBox.critical(self.parent,"ERROR: Data not readable!","Couldn't read the file. Please upload a CSV with exactly two columns: time in column 1 and ECG signal in column 2!")
 
     def update_ecg_plot(self, success=1, *args):
         if not success:
@@ -81,7 +84,6 @@ class ECG_controller(QObject):
                     endx = self.ecg.X_Data()[end_start_ix:end_stop_ix]
                     endy = self.ecg.HeartRate_Y[end_start_ix:end_stop_ix]
                     self.parent.HR_Axis.partial_calculation_heart_rate_end.setData(endx,endy)
-
 
     def update_heartrate_plot(self):
         if self.removal_regions is not None:
