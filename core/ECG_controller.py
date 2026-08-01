@@ -34,6 +34,7 @@ class ECG_controller(QObject):
 
     def setup_events(self):
         self.dataLoaded.connect(self.update_ecg_plot)
+        self.dataLoaded.connect(self.enable_buttons)
 
     def load_data(self):
         self.ecg = ECG()  # User loaded data - initialize the ECG. This way when a user loads another file, the ECG class and its properties become a clean slate.
