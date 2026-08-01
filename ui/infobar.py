@@ -22,6 +22,8 @@ class InfoBarButton(QToolButton):
         self.setStyleSheet("""
                              QToolButton:checked {background:#8a8a8a;}  
                           """)
+        # Set it disabled by default
+        self.setEnabled(False)
 
     def change_style_mode(self,iconName):
         # detect dark or not

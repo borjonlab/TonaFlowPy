@@ -85,6 +85,15 @@ class ECG_controller(QObject):
                     endy = self.ecg.HeartRate_Y[end_start_ix:end_stop_ix]
                     self.parent.HR_Axis.partial_calculation_heart_rate_end.setData(endx,endy)
 
+    def enable_buttons(self):
+        self.parent.add_heartbeat_button.setEnabled(True)
+        self.parent.remove_heartbeat_button.setEnabled(True)
+        self.parent.show_filtered_signal_toggle.setEnabled(True)
+        self.parent.show_partial_calc_toggle.setEnabled(True)
+        self.parent.show_removed_heartbeats_toggle.setEnabled(True)
+        self.parent.insert_removal_region_button.setEnabled(True)
+
+
     def update_heartrate_plot(self):
         if self.removal_regions is not None:
             # self.ecg.splice_ECG(self.removal_regions["region"])
