@@ -231,9 +231,9 @@ class TonaFlow(QMainWindow):
     ### MenuBar Actions/Events ###
     ## File...
     def open_project_file_action_clicked(self):
-        pass
+        self.controller.open_project_file()
     def save_project_file_action_clicked(self):
-        pass
+        self.controller.save_project_file()
     def load_ecg_action_clicked(self):
         self.controller.load_data()
     def export_data_action_clicked(self):

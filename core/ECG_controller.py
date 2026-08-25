@@ -11,6 +11,8 @@ from ui.windows.beat_detection import BeatDetectionWindow
 from ui.plots import RemovalRegion
 from ui.windows.about import AboutWindow
 
+import json
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.View import TonaFlow
@@ -24,7 +26,7 @@ class ECG_controller(QObject):
 
     def __init__(self, parent_widget: "TonaFlow"):
         super().__init__()
-        self.ecg: ECG
+        self.ecg: ECG = ECG()
         self.parent: "TonaFlow" = parent_widget
         self.setup_events()
         self.removal_regions = {"object": []}
@@ -37,7 +39,8 @@ class ECG_controller(QObject):
         self.dataLoaded.connect(self.enable_buttons)
 
     def load_data(self):
-        self.ecg = ECG()  # User loaded data - initialize the ECG. This way when a user loads another file, the ECG class and its properties become a clean slate.
+        # User loaded data, so we run Project_Cleanup() to return to a clean state
+        self.project_cleanup()
         file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open CSV", "", "CSV Files (*.csv)")
         success = self.ecg.read_csv(file_path)
         if success != 0:
@@ -291,6 +294,63 @@ class ECG_controller(QObject):
             except Exception as e:
                 QMessageBox.critical(self.parent, "CSV export failed", f"Failed  {str(e)}")
 
+
+    ## Openning and saving project files 
+    def save_project_file(self):
+        file_path = QFileDialog.getSaveFileName(self.parent, "Save Project File", "", "Project Files (*.Flow)")[0]
+        if file_path:
+            try:
+                project_info = self.collect_project_info()
+                
+                # # Write to JSON
+                # json_data = pd.Series(project_info).to_json(orient='index')
+                with open(file_path, 'w') as f:
+                    f.write(project_info)    
+
+                QMessageBox.information(self.parent, "Project saved", f"Project saved @ {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self.parent, "Project save failed", f"Failed to save project: {str(e)}")
+
+    def collect_project_info(self):
+        ecg_attr = vars(self.ecg)
+        ser = pd.Series(ecg_attr).to_json(orient='index')
+        return ser
+    
+    def project_cleanup(self,reset_object = False):
+        if reset_object == True:
+            # Reset ECG Data
+            self.ecg = ECG()
+
+        # Clear the plots
+        self.parent.ECG_Axis.clear_plot()
+        self.parent.HR_Axis.clear_plot()
+        self.removal_regions = {"object": []}
+        self.dataLoaded.emit(1)
+    
+    def open_project_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open Project File", "", "Project Files (*.Flow)")
+        if file_path:
+            
+            try:
+                with open(file_path,'r') as f:
+                    json_data = json.decoder.JSONDecoder().decode(f.read())
+                for key in json_data.keys():
+                    setattr(self.ecg,key,json_data[key])
+
+                # Sloppily make sure that heartbeats comes back in as int, not fl64
+                self.ecg.HeartBeats = [int(beat) for beat in self.ecg.HeartBeats]
+                self.ecg.HeartBeats_Spliced = [int(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced]
+                self.project_cleanup()
+                self.dataLoaded.emit(1)
+                
+            except Exception as e:
+                QMessageBox.critical(self.parent, "Project load failed", f"Failed to load project: {str(e)}")
+                return
+                                    
+                    
+        
+
+    
     def open_about_window(self):
         self.win = AboutWindow(self.parent)
         self.win.show()
