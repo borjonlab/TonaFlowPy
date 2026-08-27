@@ -39,14 +39,16 @@ class ECG_controller(QObject):
         self.dataLoaded.connect(self.enable_buttons)
 
     def load_data(self):
-        # User loaded data, so we run Project_Cleanup() to return to a clean state
-        self.project_cleanup()
+        
         file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open CSV", "", "CSV Files (*.csv)")
-        success = self.ecg.read_csv(file_path)
-        if success != 0:
-            self.dataLoaded.emit(success)
-        else:
-            QMessageBox.critical(self.parent,"ERROR: Data not readable!","Couldn't read the file. Please upload a CSV with exactly two columns: time in column 1 and ECG signal in column 2!")
+        if file_path:
+            # User loaded data, so we run Project_Cleanup() to return to a clean state
+            self.project_cleanup()
+            success = self.ecg.read_csv(file_path)
+            if success != 0:
+                self.dataLoaded.emit(success)
+            else:
+                QMessageBox.critical(self.parent,"ERROR: Data not readable!","Couldn't read the file. Please upload a CSV with exactly two columns: time in column 1 and ECG signal in column 2!")
 
     def update_ecg_plot(self, success=1, *args):
         if not success:
@@ -338,15 +340,26 @@ class ECG_controller(QObject):
                     setattr(self.ecg,key,json_data[key])
 
                 # Sloppily make sure that heartbeats comes back in as int, not fl64
-                self.ecg.HeartBeats = [int(beat) for beat in self.ecg.HeartBeats]
-                self.ecg.HeartBeats_Spliced = [int(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced]
+                # self.ecg.HeartBeats = [int(beat) for beat in self.ecg.HeartBeats]
+                # self.ecg.HeartBeats_Spliced = [int(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced]
+                self.recast_variables()
                 self.project_cleanup()
                 self.dataLoaded.emit(1)
                 
             except Exception as e:
                 QMessageBox.critical(self.parent, "Project load failed", f"Failed to load project: {str(e)}")
                 return
-                                    
+
+
+    def recast_variables(self):
+        # When saving a project to XML, we lose all data types. Recast everything back to what it should be. 
+        self.ecg.HeartBeats = np.array([int(beat) for beat in self.ecg.HeartBeats])
+        self.ecg.HeartBeats_Spliced = np.array([int(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced])
+
+        self.ecg.X_Data_Raw = np.array(np.float32(self.ecg.X_Data_Raw))
+        self.ecg.Y_Data_Raw = np.array(np.float32(self.ecg.Y_Data_Raw))
+        self.ecg.X_Data_Filtered = np.array(np.float32(self.ecg.X_Data_Filtered))
+        self.ecg.Y_Data_Filtered = np.array(np.float32(self.ecg.Y_Data_Filtered))
                     
         
 
