@@ -1,5 +1,5 @@
 from PyQt6.QtCore import pyqtSignal, QObject
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QApplication
 
 import pyqtgraph as pg
 import pandas as pd
@@ -138,12 +138,16 @@ class ECG_controller(QObject):
             reg.append(r.getRegion())
         return reg
 
-    def insert_removal_region(self):
+    def insert_removal_region(self,loc):
         if self.ecg.HeartBeats is not None:
             # Get the current view of the screen, that is where we will insert 
             xrange = self.parent.ECG_Axis.getViewBox().viewRange()[0]
-            b = (xrange[0] + xrange[1]) / 2
-            u = b + xrange[1]/10
+            if loc is not None:
+                b = (xrange[0] + xrange[1]) / 2
+                u = b + xrange[1]/10
+            else:
+                b = loc[0]
+                u = loc[1]
             region = RemovalRegion((b,u))
             region.sigRegionChanged.connect(self.update_ecg_plot)
             region.removeRequest.connect(self.remove_removal_region)
@@ -339,22 +343,29 @@ class ECG_controller(QObject):
                 for key in json_data.keys():
                     setattr(self.ecg,key,json_data[key])
 
-                # Sloppily make sure that heartbeats comes back in as int, not fl64
-                # self.ecg.HeartBeats = [int(beat) for beat in self.ecg.HeartBeats]
-                # self.ecg.HeartBeats_Spliced = [int(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced]
+                # Recast variables
                 self.recast_variables()
                 self.project_cleanup()
+
+
+                # Insert removal regions manually 
+                QApplication.processEvents() # Called to give Qt time to catch up in the event queue
+                removal_region_locations = json_data['SpliceLocations']
+                for loc in removal_region_locations:
+                    self.insert_removal_region(loc)
+                
+               
+                
                 self.dataLoaded.emit(1)
                 
             except Exception as e:
                 QMessageBox.critical(self.parent, "Project load failed", f"Failed to load project: {str(e)}")
                 return
-
-
+            
     def recast_variables(self):
         # When saving a project to XML, we lose all data types. Recast everything back to what it should be. 
-        self.ecg.HeartBeats = np.array([int(beat) for beat in self.ecg.HeartBeats])
-        self.ecg.HeartBeats_Spliced = np.array([int(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced])
+        self.ecg.HeartBeats = np.array([np.float32(beat) for beat in self.ecg.HeartBeats])
+        self.ecg.HeartBeats_Spliced = np.array([np.float32(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced])
 
         self.ecg.X_Data_Raw = np.array(np.float32(self.ecg.X_Data_Raw))
         self.ecg.Y_Data_Raw = np.array(np.float32(self.ecg.Y_Data_Raw))
