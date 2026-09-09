@@ -63,7 +63,7 @@ class ECG_controller(QObject):
                 if self.ecg.Is_Filtered == True:
                     # ECG is filtered, so display the filtered line along with the raw data. We will also need to edit the line of the ecg_line so that the alpha is lowered. 
                     self.parent.ECG_Axis.filt_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
-                    self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
+                    # self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
                 self.parent.ECG_Axis.ecg_line.setData(self.ecg.X_Data(request_raw=True),self.ecg.Y_Data(request_raw=True))
                 view_box = self.parent.ECG_Axis.getViewBox()
 
@@ -149,7 +149,7 @@ class ECG_controller(QObject):
                 b = loc[0]
                 u = loc[1]
             region = RemovalRegion((b,u))
-            region.sigRegionChanged.connect(self.update_ecg_plot)
+            region.sigRegionChangeFinished.connect(self.update_ecg_plot)
             region.removeRequest.connect(self.remove_removal_region)
             self.parent.ECG_Axis.addItem(region)
 
@@ -258,6 +258,7 @@ class ECG_controller(QObject):
 
     def run_filter(self, settings: dict):
         self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'],set = True) #Add set = true to set the filtered data to the object
+        self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
         self.filterwindow.close()
         self.update_ecg_plot()
 

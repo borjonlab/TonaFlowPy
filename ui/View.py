@@ -35,7 +35,7 @@ class TonaFlow(QMainWindow):
         self.detect_os_theme()
 
         # Set resize to false
-        self.setFixedSize(1800,720)
+        # self.setFixedSize(1800,720)
         
     def detect_os_theme(self):
         if darkdetect.isDark():

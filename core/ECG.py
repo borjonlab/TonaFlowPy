@@ -116,7 +116,7 @@ class ECG:
 
 
     def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=97.5, threshold_window=1,
-                           merge_window=20, use_abs = False):
+                           merge_window=40, use_abs = False):
         if method == 'dynamicThreshold':
             t = self.X_Data()
             y = self.Y_Data()
