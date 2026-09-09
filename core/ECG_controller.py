@@ -348,11 +348,13 @@ class ECG_controller(QObject):
                 self.project_cleanup()
 
 
-                # Insert removal regions manually 
-                QApplication.processEvents() # Called to give Qt time to catch up in the event queue
                 removal_region_locations = json_data['SpliceLocations']
                 for loc in removal_region_locations:
-                    self.insert_removal_region(loc)
+                    rs = loc[0] / json_data['SamplingRate']
+                    re = loc[1] / json_data['SamplingRate']
+                    # Insert removal regions manually 
+                    QApplication.processEvents()                 # Called to give Qt time to catch up in the event queue
+                    self.insert_removal_region([rs,re])
                 
                
                 
