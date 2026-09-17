@@ -95,9 +95,8 @@ class ECG_controller(QObject):
     def enable_buttons(self):
         self.parent.add_heartbeat_button.setEnabled(True)
         self.parent.remove_heartbeat_button.setEnabled(True)
-        self.parent.show_filtered_signal_toggle.setEnabled(True)
+        self.parent.show_raw_signal_toggle.setEnabled(True)
         self.parent.show_partial_calc_toggle.setEnabled(True)
-        self.parent.show_removed_heartbeats_toggle.setEnabled(True)
         self.parent.insert_removal_region_button.setEnabled(True)
 
 
@@ -161,8 +160,8 @@ class ECG_controller(QObject):
         else:
             QMessageBox.critical(self.parent,"Beat Detection Not Run!", "Beat detection has not been run. Removal Regions cannot be inserted.")
 
-    def show_filtered_signal_toggled(self):
-        togglestatus = self.parent.show_filtered_signal_toggle.isChecked()
+    def show_raw_signal_toggled(self):
+        togglestatus = self.parent.show_raw_signal_toggle.isChecked()
         if togglestatus == 1:
             self.parent.ECG_Axis.ecg_line.setAlpha(1,False)
         else:

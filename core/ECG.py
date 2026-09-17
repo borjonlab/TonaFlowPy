@@ -116,7 +116,7 @@ class ECG:
 
 
     def detect_heart_beats(self, method='dynamicThreshold', threshold_percentile=97.5, threshold_window=1,
-                           merge_window=40, use_abs = False):
+                        merge_window=40, use_abs=False):
         if method == 'dynamicThreshold':
             t = self.X_Data()
             y = self.Y_Data()
@@ -125,68 +125,52 @@ class ECG:
             if use_abs:
                 y = np.abs(y)
 
-            ses_len = t[len(t) - 1] - t[0]  # length of session
-            ses_size = len(t)  # Size of session in elements
+            n = len(y)
+            win_size = int(round(fs * threshold_window))  # samples per window
+            n_windows = int(np.ceil(n / win_size))         # ceil -> keep the remainder window
 
-            # Segment into N second windows; whatever user suggests.
-            # Default to 1
-            rows = int(np.floor(ses_len / threshold_window))
-            cols = int(fs * threshold_window)
-            Time = np.zeros((rows, cols))
-            for g in range(0, int(np.floor(ses_len / threshold_window)) + 1):
-                det = [i for i in range(int(1 + threshold_window * (g - 1) * fs), int(threshold_window * g * fs) + 1)]
-                Time[g - 1, :] = det
-
-            # Cast time to int64
-            Time = np.int64(Time)
             spks = []
-            thresholds = np.zeros((rows, cols))  # To save the thresholds
-            for g in range(0, Time.shape[0]):
-                seg = y[Time[g, :]]
-                p = np.percentile(seg,
-                                  threshold_percentile)  # This is the value that becomes the threshold for segment `g`
-                spks.append(Time[g][np.where(seg > p)] / fs)
-                # Append to the thresholds
-                thresholds[g, :] = p
-            # unstack the peaks, because it is nested
-            spks = np.hstack(spks)
-            mSpks = np.copy(spks)  # Make a copy of the array.. bc python name refs lol
-            mSpks = np.sort(mSpks)
+            thresholds = []
+            for g in range(n_windows):
+                start = g * win_size
+                end = min(start + win_size, n)              # clip last (partial) window
+                idx = np.arange(start, end)
+                seg = y[idx]
+                if seg.size == 0:
+                    continue
+                p = np.percentile(seg, threshold_percentile)
+                spks.append(idx[seg > p] / fs)
+                thresholds.append(np.full(idx.size, p))
 
-            # reshape the thresholds
-            thresholds = np.reshape(thresholds, thresholds.shape[0] * thresholds.shape[1])
+            spks = np.hstack(spks) if spks else np.array([])
+            thresholds = np.hstack(thresholds) if thresholds else np.array([])
 
-            # Now, we look at every single peak, and then find the max and minimum
-            # within a given window.
-            # Create a reference table, with [index, t, y]
-            ix = [i for i in range(0, t.shape[0])]
-            reftable = np.transpose(np.array([ix, t, y]))
+            mSpks = np.sort(spks)
 
-            # Window size in elements
-            nspk = []
-            nspk2 = []
-            for ix in range(0, mSpks.shape[0]):
-                this = reftable[reftable[:, 1] == mSpks[ix], :][0]
-                winix = np.array([i for i in range(np.int64(this[0] - (merge_window / 2)),
-                                                   np.int64(this[0] + (merge_window / 2)))])
+            ix = np.arange(n)
+            reftable = np.column_stack([ix, t, y])
 
-                window = reftable[winix[winix > 0], :]
-                m = np.max(window[:, 2])
+            half_win = merge_window / 2
+            nspk_t, nspk_ix = [], []
+            for spk_t in mSpks:
+                row = reftable[reftable[:, 1] == spk_t][0]
+                center_idx = row[0]
+                lo = max(0, int(center_idx - half_win))
+                hi = min(n, int(center_idx + half_win))       # <-- clip high end too
+                window = reftable[lo:hi, :]
+                if window.shape[0] == 0:
+                    continue
                 i = np.argmax(window[:, 2])
-                # nspk.append()
-                nspk.append(window[i, 1])
-                nspk2.append(window[i, 0])
-            # Cast npsk2 to int64
-            nspk2 = np.int64(nspk2)
-            # Create a dummy array for the heart beats
-            # dum = np.zeros(int(np.ceil(ses_len*fs)))
-            dum = np.zeros(len(self.X_Data()))
+                nspk_t.append(window[i, 1])
+                nspk_ix.append(window[i, 0])
 
-            dum[nspk2] = 1  # Set heartbeats = 1
-            # Assign to self.beats
-            self.HeartBeats = np.copy(dum)
+            nspk_ix = np.int64(nspk_ix)
+            dum = np.zeros(n)
+            dum[nspk_ix] = 1
+
+            self.HeartBeats = dum
             self.Thresholds = thresholds
-            self.Thresholds_X = np.arange(0, thresholds.shape[0] / fs, 1 / fs)
+            self.Thresholds_X = np.arange(len(thresholds)) / fs
 
     def filter_ECG(self, method='cwt'):
         if method == 'cwt':

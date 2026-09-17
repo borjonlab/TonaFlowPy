@@ -99,8 +99,8 @@ class TonaFlow(QMainWindow):
         view_controls_layout = QHBoxLayout()
 
         # View filtered signal toggle button
-        self.show_filtered_signal_toggle = InfoBarButton("showfiltered.svg", text="Show Filtered \n ECG Signal", istoggle = True)
-        view_controls_layout.addWidget(self.show_filtered_signal_toggle)
+        self.show_raw_signal_toggle = InfoBarButton("showraw.svg", text="Show Raw \n ECG Signal", istoggle = True)
+        view_controls_layout.addWidget(self.show_raw_signal_toggle)
 
         # Show Partial Calculation
         self.show_partial_calc_toggle = InfoBarButton("showpartialcalc.svg", text="Show Partial \n Calculation", istoggle = True)
@@ -263,8 +263,8 @@ class TonaFlow(QMainWindow):
         )
 
         ## ECG View
-        self.show_filtered_signal_toggle.clicked.connect(
-            self.controller.show_filtered_signal_toggled
+        self.show_raw_signal_toggle.clicked.connect(
+            self.controller.show_raw_signal_toggled
         )
         self.show_partial_calc_toggle.clicked.connect(
             self.controller.show_partial_calc_toggled
