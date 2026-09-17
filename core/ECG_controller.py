@@ -1,5 +1,6 @@
-from PyQt6.QtCore import pyqtSignal, QObject
+from PyQt6.QtCore import pyqtSignal, QObject, QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QApplication
+import time
 
 import pyqtgraph as pg
 import pandas as pd
@@ -142,7 +143,7 @@ class ECG_controller(QObject):
         if self.ecg.HeartBeats is not None:
             # Get the current view of the screen, that is where we will insert 
             xrange = self.parent.ECG_Axis.getViewBox().viewRange()[0]
-            if loc is not None:
+            if loc is None:
                 b = (xrange[0] + xrange[1]) / 2
                 u = b + xrange[1]/10
             else:
@@ -155,9 +156,6 @@ class ECG_controller(QObject):
 
             reg = region.getRegion()
             self.removal_regions["object"].append(region)
-            # self.removal_regions["region"].append(reg)
-            # self.ecg.splice_ECG([reg[0],reg[1]])
-            # self.ecg.SpliceLocations.append([reg[0],reg[1]])
             self.ecg.calculate_heart_rate()
             self.update_ecg_plot()
         else:
@@ -320,6 +318,16 @@ class ECG_controller(QObject):
 
     def collect_project_info(self):
         ecg_attr = vars(self.ecg)
+        plotitem = self.parent.ECG_Axis.getPlotItem()
+        children = plotitem.allChildItems()
+        for child in children:
+            if isinstance(child,RemovalRegion):
+                # self.ecg.SpliceLocations.append(child.getRegion())
+                print(child.getRegion())
+
+        print("************** SPLICE LOCATIONS FROM ECG")
+        for loc in self.ecg.SpliceLocations:
+            print(loc)
         ser = pd.Series(ecg_attr).to_json(orient='index')
         return ser
     
@@ -355,6 +363,7 @@ class ECG_controller(QObject):
                     re = loc[1] / json_data['SamplingRate']
                     # Insert removal regions manually 
                     QApplication.processEvents()                 # Called to give Qt time to catch up in the event queue
+                    time.sleep(.05)
                     self.insert_removal_region([rs,re])
                 
                
