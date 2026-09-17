@@ -108,11 +108,6 @@ class TonaFlow(QMainWindow):
         view_controls_layout.addWidget(self.show_partial_calc_toggle)
 
 
-        # Show removed heartbeats checkbox 
-        self.show_removed_heartbeats_toggle = InfoBarButton("removedbeats.svg",text="Show Removed \n Heartbeats", istoggle = True)
-        view_controls_layout.addWidget(self.show_removed_heartbeats_toggle)
-
-
         view_controls_groupbox.setLayout(view_controls_layout)
         container_layout.addSpacing(100)
         # Add to the container layout for the infobar
