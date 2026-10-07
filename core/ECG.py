@@ -139,7 +139,7 @@ class ECG:
                 if seg.size == 0:
                     continue
                 p = np.percentile(seg, threshold_percentile)
-                spks.append(idx[seg > p] / fs)
+                spks.append(t[idx[seg > p]])
                 thresholds.append(np.full(idx.size, p))
 
             spks = np.hstack(spks) if spks else np.array([])
@@ -153,7 +153,8 @@ class ECG:
             half_win = merge_window / 2
             nspk_t, nspk_ix = [], []
             for spk_t in mSpks:
-                row = reftable[reftable[:, 1] == spk_t][0]
+                # row = reftable[reftable[:, 1] == spk_t][0]
+                row = reftable[np.isclose(reftable[:,1],spk_t)][0]
                 center_idx = row[0]
                 lo = max(0, int(center_idx - half_win))
                 hi = min(n, int(center_idx + half_win))       # <-- clip high end too
