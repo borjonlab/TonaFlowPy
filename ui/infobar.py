@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QSize
+from core.resource_mgmt.resource_path import resource_path
 
 import pyqtgraph as pg
 import numpy as np
@@ -28,9 +29,9 @@ class InfoBarButton(QToolButton):
     def change_style_mode(self,iconName):
         # detect dark or not
         if darkdetect.isDark():
-            self.setIcon(QIcon("imgs/icons/Infobar/dark/" + iconName))
+            self.setIcon(QIcon(resource_path("imgs/icons/Infobar/dark/" + iconName)))
         else:
-            self.setIcon(QIcon("imgs/icons/Infobar/light/" + iconName))
+            self.setIcon(QIcon(resource_path("imgs/icons/Infobar/light/" + iconName)))
 
 class InfoBarGroupBox(QGroupBox):
     def __init__(self, title):

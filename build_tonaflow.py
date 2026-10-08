@@ -63,4 +63,4 @@ if __name__ == "__main__":
     datas = build_datas(IMGS_DIR)
 
     update_spec_file(SPEC_FILE, datas)
-    subprocess.run(["pyinstaller","TonaFlow.spec"])
+    subprocess.run(["pyinstaller","TonaFlow.spec","--noconfirm"])
