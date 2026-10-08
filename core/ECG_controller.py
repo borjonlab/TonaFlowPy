@@ -1,5 +1,6 @@
-from PyQt6.QtCore import pyqtSignal, QObject
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtCore import pyqtSignal, QObject, QTimer
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QApplication
+import time
 
 import pyqtgraph as pg
 import pandas as pd
@@ -10,6 +11,8 @@ from ui.windows.filtering import FilteringWindow
 from ui.windows.beat_detection import BeatDetectionWindow
 from ui.plots import RemovalRegion
 from ui.windows.about import AboutWindow
+
+import json
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -24,7 +27,7 @@ class ECG_controller(QObject):
 
     def __init__(self, parent_widget: "TonaFlow"):
         super().__init__()
-        self.ecg: ECG
+        self.ecg: ECG = ECG()
         self.parent: "TonaFlow" = parent_widget
         self.setup_events()
         self.removal_regions = {"object": []}
@@ -34,12 +37,19 @@ class ECG_controller(QObject):
 
     def setup_events(self):
         self.dataLoaded.connect(self.update_ecg_plot)
+        self.dataLoaded.connect(self.enable_buttons)
 
     def load_data(self):
-        self.ecg = ECG()  # User loaded data - initialize the ECG. This way when a user loads another file, the ECG class and its properties become a clean slate.
+        
         file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open CSV", "", "CSV Files (*.csv)")
-        success = self.ecg.read_csv(file_path)
-        self.dataLoaded.emit(success)
+        if file_path:
+            # User loaded data, so we run Project_Cleanup() to return to a clean state
+            self.project_cleanup()
+            success = self.ecg.read_csv(file_path)
+            if success != 0:
+                self.dataLoaded.emit(success)
+            else:
+                QMessageBox.critical(self.parent,"ERROR: Data not readable!","Couldn't read the file. Please upload a CSV with exactly two columns: time in column 1 and ECG signal in column 2!")
 
     def update_ecg_plot(self, success=1, *args):
         if not success:
@@ -54,7 +64,7 @@ class ECG_controller(QObject):
                 if self.ecg.Is_Filtered == True:
                     # ECG is filtered, so display the filtered line along with the raw data. We will also need to edit the line of the ecg_line so that the alpha is lowered. 
                     self.parent.ECG_Axis.filt_line.setData(self.ecg.X_Data(), self.ecg.Y_Data())
-                    self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
+                    # self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
                 self.parent.ECG_Axis.ecg_line.setData(self.ecg.X_Data(request_raw=True),self.ecg.Y_Data(request_raw=True))
                 view_box = self.parent.ECG_Axis.getViewBox()
 
@@ -81,6 +91,13 @@ class ECG_controller(QObject):
                     endx = self.ecg.X_Data()[end_start_ix:end_stop_ix]
                     endy = self.ecg.HeartRate_Y[end_start_ix:end_stop_ix]
                     self.parent.HR_Axis.partial_calculation_heart_rate_end.setData(endx,endy)
+
+    def enable_buttons(self):
+        self.parent.add_heartbeat_button.setEnabled(True)
+        self.parent.remove_heartbeat_button.setEnabled(True)
+        self.parent.show_raw_signal_toggle.setEnabled(True)
+        self.parent.show_partial_calc_toggle.setEnabled(True)
+        self.parent.insert_removal_region_button.setEnabled(True)
 
 
     def update_heartrate_plot(self):
@@ -121,29 +138,30 @@ class ECG_controller(QObject):
             reg.append(r.getRegion())
         return reg
 
-    def insert_removal_region(self):
+    def insert_removal_region(self,loc):
         if self.ecg.HeartBeats is not None:
             # Get the current view of the screen, that is where we will insert 
             xrange = self.parent.ECG_Axis.getViewBox().viewRange()[0]
-            b = (xrange[0] + xrange[1]) / 2
-            u = b + xrange[1]/10
+            if loc is None:
+                b = (xrange[0] + xrange[1]) / 2
+                u = b + xrange[1]/10
+            else:
+                b = loc[0]
+                u = loc[1]
             region = RemovalRegion((b,u))
-            region.sigRegionChanged.connect(self.update_ecg_plot)
+            region.sigRegionChangeFinished.connect(self.update_ecg_plot)
             region.removeRequest.connect(self.remove_removal_region)
             self.parent.ECG_Axis.addItem(region)
 
             reg = region.getRegion()
             self.removal_regions["object"].append(region)
-            # self.removal_regions["region"].append(reg)
-            # self.ecg.splice_ECG([reg[0],reg[1]])
-            # self.ecg.SpliceLocations.append([reg[0],reg[1]])
             self.ecg.calculate_heart_rate()
             self.update_ecg_plot()
         else:
             QMessageBox.critical(self.parent,"Beat Detection Not Run!", "Beat detection has not been run. Removal Regions cannot be inserted.")
 
-    def show_filtered_signal_toggled(self):
-        togglestatus = self.parent.show_filtered_signal_toggle.isChecked()
+    def show_raw_signal_toggled(self):
+        togglestatus = self.parent.show_raw_signal_toggle.isChecked()
         if togglestatus == 1:
             self.parent.ECG_Axis.ecg_line.setAlpha(1,False)
         else:
@@ -237,6 +255,7 @@ class ECG_controller(QObject):
 
     def run_filter(self, settings: dict):
         self.ecg.wavelet_bandpass(lowcutoff=settings['low_cutoff'], highcutoff=settings['high_cutoff'],set = True) #Add set = true to set the filtered data to the object
+        self.parent.ECG_Axis.ecg_line.setAlpha(.1,False)
         self.filterwindow.close()
         self.update_ecg_plot()
 
@@ -279,6 +298,94 @@ class ECG_controller(QObject):
             except Exception as e:
                 QMessageBox.critical(self.parent, "CSV export failed", f"Failed  {str(e)}")
 
+
+    ## Openning and saving project files 
+    def save_project_file(self):
+        file_path = QFileDialog.getSaveFileName(self.parent, "Save Project File", "", "Project Files (*.Flow)")[0]
+        if file_path:
+            try:
+                project_info = self.collect_project_info()
+                
+                # # Write to JSON
+                # json_data = pd.Series(project_info).to_json(orient='index')
+                with open(file_path, 'w') as f:
+                    f.write(project_info)    
+
+                QMessageBox.information(self.parent, "Project saved", f"Project saved @ {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self.parent, "Project save failed", f"Failed to save project: {str(e)}")
+
+    def collect_project_info(self):
+        ecg_attr = vars(self.ecg)
+        plotitem = self.parent.ECG_Axis.getPlotItem()
+        children = plotitem.allChildItems()
+        for child in children:
+            if isinstance(child,RemovalRegion):
+                # self.ecg.SpliceLocations.append(child.getRegion())
+                print(child.getRegion())
+
+        print("************** SPLICE LOCATIONS FROM ECG")
+        for loc in self.ecg.SpliceLocations:
+            print(loc)
+        ser = pd.Series(ecg_attr).to_json(orient='index')
+        return ser
+    
+    def project_cleanup(self,reset_object = False):
+        if reset_object == True:
+            # Reset ECG Data
+            self.ecg = ECG()
+
+        # Clear the plots
+        self.parent.ECG_Axis.clear_plot()
+        self.parent.HR_Axis.clear_plot()
+        self.removal_regions = {"object": []}
+        self.dataLoaded.emit(1)
+    
+    def open_project_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open Project File", "", "Project Files (*.Flow)")
+        if file_path:
+            
+            try:
+                with open(file_path,'r') as f:
+                    json_data = json.decoder.JSONDecoder().decode(f.read())
+                for key in json_data.keys():
+                    setattr(self.ecg,key,json_data[key])
+
+                # Recast variables
+                self.recast_variables()
+                self.project_cleanup()
+
+
+                removal_region_locations = json_data['SpliceLocations']
+                for loc in removal_region_locations:
+                    rs = loc[0] / json_data['SamplingRate']
+                    re = loc[1] / json_data['SamplingRate']
+                    # Insert removal regions manually 
+                    QApplication.processEvents()                 # Called to give Qt time to catch up in the event queue
+                    time.sleep(.05)
+                    self.insert_removal_region([rs,re])
+                
+               
+                
+                self.dataLoaded.emit(1)
+                
+            except Exception as e:
+                QMessageBox.critical(self.parent, "Project load failed", f"Failed to load project: {str(e)}")
+                return
+            
+    def recast_variables(self):
+        # When saving a project to XML, we lose all data types. Recast everything back to what it should be. 
+        self.ecg.HeartBeats = np.array([np.float32(beat) for beat in self.ecg.HeartBeats])
+        self.ecg.HeartBeats_Spliced = np.array([np.float32(beat) if beat is not None else np.nan for beat in self.ecg.HeartBeats_Spliced])
+
+        self.ecg.X_Data_Raw = np.array(np.float32(self.ecg.X_Data_Raw))
+        self.ecg.Y_Data_Raw = np.array(np.float32(self.ecg.Y_Data_Raw))
+        self.ecg.X_Data_Filtered = np.array(np.float32(self.ecg.X_Data_Filtered))
+        self.ecg.Y_Data_Filtered = np.array(np.float32(self.ecg.Y_Data_Filtered))
+                    
+        
+
+    
     def open_about_window(self):
         self.win = AboutWindow(self.parent)
         self.win.show()

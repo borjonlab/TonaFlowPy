@@ -37,7 +37,8 @@ class EcgPlot(pg.PlotWidget):
     def setup_plot_items(self):
         self.ecg_line = pg.PlotDataItem(symbol='o', pen='g', symbolBrush='g', symbolSize=2.5, width=1)
         self.filt_line = pg.PlotDataItem(symbol='o', pen='w', symbolBrush='w', symbolSize=2.5, width=1)
-        self.heartbeats_line = pg.PlotDataItem(pen=None, symbolPen=None, symbol='o')
+        self.heartbeats_line = pg.PlotDataItem(pen=None, symbolPen='r', symbolBrush='r', symbol='t')
+
         self.point_selector = self.SelectedPoint(
             symbolPen='w',
             symbolBrush='w',
@@ -69,6 +70,18 @@ class EcgPlot(pg.PlotWidget):
         self.filt_line.setClipToView(True)
         self.heartbeats_line.setDownsampling(auto=True)
         self.heartbeats_line.setDownsampling(True)
+
+    def clear_plot(self):
+        self.ecg_line.setData([], [])
+        self.filt_line.setData([], [])
+        self.heartbeats_line.setData([], [])
+        self.point_selector.deselectPoint()
+        self.coord_label.hide()
+        for region in self.RemovalRegions:
+            self.removeItem(region)
+        self.RemovalRegions.clear()
+        self.partial_calculation_region_beg.setRegion((0,0))
+        self.partial_calculation_region_end.setRegion((0,0))
 
     def setup_mouse_events(self):
         # self.scene().sigMouseClicked.connect(self.mouse_clicked)
@@ -201,6 +214,10 @@ class HeartRatePlot(pg.PlotWidget):
         self.addItem(self.partial_calculation_heart_rate_beg)
         self.addItem(self.partial_calculation_heart_rate_end)
 
+    def clear_plot(self):
+        self.heart_rate_line.setData([], [])
+        self.partial_calculation_heart_rate_beg.setData([], [])
+        self.partial_calculation_heart_rate_end.setData([], [])
     
     def setup_labels(self):
         self.setLabel('left', 'Heart Rate', units='BPM')

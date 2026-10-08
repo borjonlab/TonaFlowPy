@@ -14,6 +14,7 @@ from ui.infobar import InfoBarButton, InfoBarGroupBox
 
 import darkdetect
 import sys
+from core.resource_mgmt.resource_path import resource_path
 
 from core.resource_mgmt.rsp import resource_path
 
@@ -35,7 +36,7 @@ class TonaFlow(QMainWindow):
         self.detect_os_theme()
 
         # Set resize to false
-        self.setFixedSize(1800,720)
+        # self.setFixedSize(1800,720)
         
     def detect_os_theme(self):
         if darkdetect.isDark():
@@ -99,18 +100,13 @@ class TonaFlow(QMainWindow):
         view_controls_layout = QHBoxLayout()
 
         # View filtered signal toggle button
-        self.show_filtered_signal_toggle = InfoBarButton("showfiltered.svg", text="Show Filtered \n ECG Signal", istoggle = True)
-        view_controls_layout.addWidget(self.show_filtered_signal_toggle)
+        self.show_raw_signal_toggle = InfoBarButton("showraw.svg", text="Show Raw \n ECG Signal", istoggle = True)
+        view_controls_layout.addWidget(self.show_raw_signal_toggle)
 
         # Show Partial Calculation
         self.show_partial_calc_toggle = InfoBarButton("showpartialcalc.svg", text="Show Partial \n Calculation", istoggle = True)
         self.show_partial_calc_toggle.setChecked(True)
         view_controls_layout.addWidget(self.show_partial_calc_toggle)
-
-
-        # Show removed heartbeats checkbox 
-        self.show_removed_heartbeats_toggle = InfoBarButton("removedbeats.svg",text="Show Removed \n Heartbeats", istoggle = True)
-        view_controls_layout.addWidget(self.show_removed_heartbeats_toggle)
 
 
         view_controls_groupbox.setLayout(view_controls_layout)
@@ -231,9 +227,9 @@ class TonaFlow(QMainWindow):
     ### MenuBar Actions/Events ###
     ## File...
     def open_project_file_action_clicked(self):
-        pass
+        self.controller.open_project_file()
     def save_project_file_action_clicked(self):
-        pass
+        self.controller.save_project_file()
     def load_ecg_action_clicked(self):
         self.controller.load_data()
     def export_data_action_clicked(self):
@@ -268,8 +264,8 @@ class TonaFlow(QMainWindow):
         )
 
         ## ECG View
-        self.show_filtered_signal_toggle.clicked.connect(
-            self.controller.show_filtered_signal_toggled
+        self.show_raw_signal_toggle.clicked.connect(
+            self.controller.show_raw_signal_toggled
         )
         self.show_partial_calc_toggle.clicked.connect(
             self.controller.show_partial_calc_toggled
