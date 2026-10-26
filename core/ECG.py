@@ -1,3 +1,6 @@
+import os
+import datetime
+
 import numpy as np
 import pandas as pd
 
@@ -7,6 +10,50 @@ from scipy.signal import butter, lfilter
 from ssqueezepy import cwt, wavelets, Wavelet, icwt
 from ssqueezepy.wavelets import center_frequency
 from ssqueezepy.utils import make_scales
+import mne
+import pyxdf
+import wfdb
+
+# note that the xdf streams need to come from pyxdf.load_xdf(),and that the edf channel names can come from pyedflib/mne libraries
+def find_ecg_channel_index(channel_names):
+    for i in range(len(channel_names)):
+        nm = str(channel_names[i]).lower()
+        if 'ecg' in nm or 'ekg' in nm:
+            return i
+    leadNames = ['ii', 'lead ii', 'leadii', 'lead 2', 'lead2']
+    for i in range(len(channel_names)):
+        nm = str(channel_names[i]).lower().strip()
+        if nm in leadNames:
+            return i
+    if len(channel_names) == 1:
+        return 0
+    return None
+
+def get_xdf_channel_labels(stream):
+    labels = []
+    try:
+        chs = stream['info']['desc'][0]['channels'][0]['channel']
+        for ch in chs:
+            labels.append(ch['label'][0])
+    except (TypeError, KeyError, IndexError):
+        pass
+    return labels
+def find_ecg_stream(streams):
+    for s in streams:
+        sType = s['info'].get('type', [''])[0].lower()
+        sName = s['info'].get('name', [''])[0].lower()
+        if 'ecg' in sType or 'ekg' in sType:
+            return s
+        if 'ecg' in sName or 'ekg' in sName:
+            return s
+    for s in streams:
+        names = get_xdf_channel_labels(s)
+        if find_ecg_channel_index(names) != None:
+            return s
+
+    if len(streams) == 1:
+        return streams[0]
+    return None
 
 
 class ECG:
@@ -43,6 +90,11 @@ class ECG:
         # Detection settings
         self.det_settings = None
 
+        # File import/export metadata
+        self.ChannelName = None
+        self.StartTime = None
+        self.load_error = None
+
     # Setup Functions
     def estimate_sampling_rate(self):
         return 1 / np.mean(np.diff(self.X_Data()))
@@ -52,17 +104,193 @@ class ECG:
             file = pd.read_csv(filepath)
             x = file.iloc[:, 0].to_numpy(dtype='float')
             y = file.iloc[:, 1].to_numpy(dtype='float')
-            
-            # Normalize so that baseline is around zero 
+
+            # Normalize so that baseline is around zero
             y = y - np.mean(y)
             # return x,y
 
             self.X_Data_Raw = x
             self.Y_Data_Raw = y
             self.SamplingRate = self.estimate_sampling_rate()
+            self.ChannelName = None
+            self.StartTime = None
             return 1
-        except:
+        except Exception as e:
+            self.load_error = str(e)
             return 0
+    def read_edf(self, filepath):
+        try:
+            raw = mne.io.read_raw_edf(filepath, preload=True, verbose=False)
+            channel_names = raw.ch_names
+            ecg_index = find_ecg_channel_index(channel_names)
+            if ecg_index is None:
+                self.load_error = "No ecg channel in the  file (found: " + ", ".join(channel_names) + ")"
+
+                return 0
+            fs = raw.info['sfreq']
+            y = raw.get_data(picks=[ecg_index])[0]
+            y = y - np.mean(y)
+            self.X_Data_Raw = np.arange(len(y)) / fs
+            self.Y_Data_Raw = y
+            self.SamplingRate = fs
+            self.ChannelName = channel_names[ecg_index]
+            self.StartTime = raw.info.get('meas_date')
+            return 1
+        except Exception as e:
+            self.load_error = str(e)
+            return 0
+
+    def read_xdf(self, filepath):
+        try:
+            streams, header = pyxdf.load_xdf(filepath)
+
+            stream = find_ecg_stream(streams)
+            if stream is None:
+                self.load_error = "Cannot find stream"
+                return 0
+
+            channel_names = get_xdf_channel_labels(stream)
+            if channel_names:
+                ecg_index = find_ecg_channel_index(channel_names)
+            else:
+                num_channels = stream['time_series'].shape[1]
+                if num_channels == 1:
+                    ecg_index = 0
+                else:
+                    ecg_index = None
+
+            if ecg_index is None:
+                found_names = ", ".join(channel_names)
+                self.load_error = "No  channel in  edf stream (found:" + found_names +")"
+                return 0
+
+            time_series = stream['time_series']
+            signal = time_series[:, ecg_index]
+            signal = signal.astype(float)
+            average = np.mean(signal)
+            signal = signal - average
+
+            timestamps = stream['time_stamps']
+            first_timestamp = timestamps[0]
+            times = timestamps - first_timestamp
+
+            nominal_rate = stream['info']['nominal_srate'][0]
+            fs = float(nominal_rate)
+            if fs <= 0:
+                time_steps = np.diff(times)
+                average_step = np.mean(time_steps)
+                fs = 1 / average_step
+
+            self.X_Data_Raw = times
+            self.Y_Data_Raw = signal
+            self.SamplingRate = fs
+
+            if channel_names:
+                self.ChannelName = channel_names[ecg_index]
+            else:
+                self.ChannelName = stream['info']['name'][0]
+            self.StartTime = None
+            return 1
+        except Exception as e:
+            self.load_error = str(e)
+            return 0
+
+    def read_wfdb(self, filepath):
+        try:
+            name_parts = os.path.splitext(filepath)
+            record_name = name_parts[0]
+            record = wfdb.rdrecord(record_name)
+
+            channel_names = record.sig_name
+            ecg_index = find_ecg_channel_index(channel_names)
+            if ecg_index is None:
+                found_names = ", ".join(channel_names)
+                self.load_error = "No ecg channel in Wfdb (found: " + found_names + ")"
+                return 0
+
+            fs = record.fs
+            signal = record.p_signal[:, ecg_index]
+            average = np.mean(signal)
+            signal = signal - average
+
+            num_samples = len(signal)
+            sample_numbers = np.arange(num_samples)
+            self.X_Data_Raw = sample_numbers / fs
+            self.Y_Data_Raw = signal
+            self.SamplingRate = fs
+            self.ChannelName = channel_names[ecg_index]
+
+            if record.base_date and record.base_time:
+                self.StartTime = datetime.datetime.combine(record.base_date, record.base_time)
+            else:
+                self.StartTime = None
+            return 1
+        except Exception as e:
+            self.load_error = str(e)
+            return 0
+
+    def export_edf(self, filepath):
+        if self.ChannelName:
+            channel_name = self.ChannelName
+        else:
+            channel_name = 'ECG'
+
+        info = mne.create_info(
+            ch_names=[channel_name],
+            sfreq=self.SamplingRate,
+            ch_types=['ecg']
+        )
+
+        signal = self.Y_Data()
+        signal_row = np.reshape(signal, (1, -1))
+        raw = mne.io.RawArray(
+            signal_row,
+            info,
+            verbose=False
+        )
+
+        if self.StartTime is not None:
+            meas_date = self.StartTime
+            if meas_date.tzinfo is None:
+                meas_date = meas_date.replace(tzinfo=datetime.timezone.utc)
+            raw.set_meas_date(meas_date)
+
+        raw.export(
+            filepath,
+            fmt='edf',
+            overwrite=True
+        )
+
+    def export_wfdb(self, filepath):
+        path_parts = os.path.split(filepath)
+        directory = path_parts[0]
+        file_name = path_parts[1]
+        name_parts = os.path.splitext(file_name)
+        record_name = name_parts[0]
+
+        if self.ChannelName:
+            channel_name = self.ChannelName
+        else:
+            channel_name = 'ECG'
+
+        signal = self.Y_Data()
+        signal_column = np.reshape(signal, (-1, 1))
+
+        if directory:
+            write_dir = directory
+        else:
+            write_dir = '.'
+
+        wfdb.wrsamp(
+            record_name,
+            fs=self.SamplingRate,
+            units=['mV'],
+            sig_name=[channel_name],
+            p_signal=signal_column,
+            fmt=['16'],
+            base_datetime=self.StartTime,
+            write_dir=write_dir
+        )
 
     # Get Functions
     def X_Data(self,request_raw = False):

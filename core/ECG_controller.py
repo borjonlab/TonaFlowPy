@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtCore import pyqtSignal, QObject, QTimer
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QApplication
 import time
@@ -11,6 +13,7 @@ from ui.windows.filtering import FilteringWindow
 from ui.windows.beat_detection import BeatDetectionWindow
 from ui.plots import RemovalRegion
 from ui.windows.about import AboutWindow
+from ui.windows.settings import SettingsWindow
 
 import json
 
@@ -40,16 +43,27 @@ class ECG_controller(QObject):
         self.dataLoaded.connect(self.enable_buttons)
 
     def load_data(self):
-        
-        file_path, _ = QFileDialog.getOpenFileName(self.parent, "Open CSV", "", "CSV Files (*.csv)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.parent, "Open ECG File", "","ECG Files (*.csv *.edf *.xdf *.hea);;CSV Files (*.csv);;EDF Files (*.edf);;XDF Files (*.xdf);;WFDB Files (*.hea)")
         if file_path:
             # User loaded data, so we run Project_Cleanup() to return to a clean state
             self.project_cleanup()
-            success = self.ecg.read_csv(file_path)
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext == '.csv':
+                success = self.ecg.read_csv(file_path)
+            elif ext == '.edf':
+                success = self.ecg.read_edf(file_path)
+            elif ext == '.xdf':
+                success = self.ecg.read_xdf(file_path)
+            elif ext == '.hea':
+                success = self.ecg.read_wfdb(file_path)
+            else:
+                QMessageBox.critical(self.parent, "FIle not supported", f"Can't open {ext} files")
+                return
             if success != 0:
                 self.dataLoaded.emit(success)
             else:
-                QMessageBox.critical(self.parent,"ERROR: Data not readable!","Couldn't read the file. Please upload a CSV with exactly two columns: time in column 1 and ECG signal in column 2!")
+                QMessageBox.critical(self.parent, "Ecg not loaded", self.ecg.load_error or "can't read this file")
 
     def update_ecg_plot(self, success=1, *args):
         if not success:
@@ -148,7 +162,7 @@ class ECG_controller(QObject):
             else:
                 b = loc[0]
                 u = loc[1]
-            region = RemovalRegion((b,u))
+            region = RemovalRegion((b,u), brush=pg.mkBrush(self.parent.ECG_Axis.plot_settings['region_color']))
             region.sigRegionChangeFinished.connect(self.update_ecg_plot)
             region.removeRequest.connect(self.remove_removal_region)
             self.parent.ECG_Axis.addItem(region)
@@ -298,6 +312,26 @@ class ECG_controller(QObject):
             except Exception as e:
                 QMessageBox.critical(self.parent, "CSV export failed", f"Failed  {str(e)}")
 
+    def export_signal(self):
+
+        if not hasattr(self, 'ecg') or len(self.ecg.X_Data()) == 0:
+            QMessageBox.warning(self.parent, "No data", "ECG isn't loaded")
+            return
+        file_path, selected_filter = QFileDialog.getSaveFileName(self.parent, "Export ECG Signal", "", "EDF Files (*.edf);;WFDB Files (*.hea)")
+        if file_path:
+            try:
+                if 'EDF' in selected_filter:
+                    if not file_path.lower().endswith('.edf'):
+                        file_path += '.edf'
+                    self.ecg.export_edf(file_path)
+                else:
+                    if not file_path.lower().endswith('.hea'):
+                        file_path += '.hea'
+                    self.ecg.export_wfdb(file_path)
+                QMessageBox.information(self.parent, "Sucessful", f"exported @ {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self.parent, "Failed", f" {e}")
+
 
     ## Openning and saving project files 
     def save_project_file(self):
@@ -392,6 +426,16 @@ class ECG_controller(QObject):
         self.win.center_on_parent()
 
     def open_settings_window(self):
-        pass
+        self.settings_win = SettingsWindow(self.parent.ECG_Axis.plot_settings, self.parent)
+        self.settings_win.settingsApplied.connect(self.apply_plot_settings)
+        self.settings_win.show()
+    def apply_plot_settings(self, cfg: dict):
+        self.parent.ECG_Axis.set_pens(cfg)
+        for region in self.removal_regions['object']:
+            region.setBrush(pg.mkBrush(cfg['region_color']))
+            hoverColor = pg.mkColor(cfg['region_color'])
+            hoverColor.setAlpha(min(hoverColor.alpha() * 2, 255))
+            region.setHoverBrush(pg.mkBrush(hoverColor))
+            region.update()
 
 

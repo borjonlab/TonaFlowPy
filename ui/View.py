@@ -196,11 +196,14 @@ class TonaFlow(QMainWindow):
 
         ## Add actions for file... menu
         # Loading ECG files
-        load_ecg_action = filemenu.addAction("New Project / Load New ECG (.csv)")
+        load_ecg_action = filemenu.addAction("New Project / Load New ECG (.csv, .edf, .xdf, .hea)")
         load_ecg_action.triggered.connect(self.load_ecg_action_clicked)
         # Exporting Heart Rate and Beats
         export_data_action = filemenu.addAction("Export Heart Rate and Heart Beats (.csv)")
         export_data_action.triggered.connect(self.export_data_action_clicked)
+        # Exporting the ECG signal to a standard format
+        export_signal_action = filemenu.addAction("Export ECG Signal (.edf, .hea)")
+        export_signal_action.triggered.connect(self.export_signal_action_clicked)
         # Saving Project Files
         save_project_file_action = filemenu.addAction("Save Project File (.Flow)")
         save_project_file_action.triggered.connect(self.save_project_file_action_clicked)
@@ -208,7 +211,7 @@ class TonaFlow(QMainWindow):
         open_project_file_action = filemenu.addAction("Open Project File (.Flow)")
         open_project_file_action.triggered.connect(self.open_project_file_action_clicked)
         # Open Settings Window
-        open_settings_window_action = filemenu.addAction("Preferences / Settings")
+        open_settings_window_action = filemenu.addAction('Settings/Preferences')
         open_settings_window_action.triggered.connect(self.open_settings_window_action_clicked)
 
         ## Add actions for ecgmenu...
@@ -234,6 +237,8 @@ class TonaFlow(QMainWindow):
         self.controller.load_data()
     def export_data_action_clicked(self):
         self.controller.export_csv()
+    def export_signal_action_clicked(self):
+        self.controller.export_signal()
     def open_settings_window_action_clicked(self):
         self.controller.open_settings_window()
     ## ECG...

@@ -14,6 +14,27 @@ class EcgPlot(pg.PlotWidget):
         self.setup_styling()
 
         self.RemovalRegions = []
+
+        self.plot_settings = {
+            'raw_color': (0, 255, 0, 255),
+            'raw_width': 1,
+            'filt_color': (255, 255, 255, 255),
+            'filt_width': 1,
+            'beat_color': (50, 50, 150, 255),
+            'beat_size': 10,
+            'beat_symbol': 'o',
+            'region_color': (0, 0, 255, 125),
+        }
+
+    def set_pens(self, cfg):
+        self.plot_settings = cfg
+        self.ecg_line.setPen(pg.mkPen(color=cfg['raw_color'], width=cfg['raw_width']))
+        self.ecg_line.setSymbolBrush(cfg['raw_color'])
+        self.filt_line.setPen(pg.mkPen(color=cfg['filt_color'], width=cfg['filt_width']))
+        self.filt_line.setSymbolBrush(cfg['filt_color'])
+        self.heartbeats_line.setSymbol(cfg['beat_symbol'])
+        self.heartbeats_line.setSymbolSize(cfg['beat_size'])
+        self.heartbeats_line.setSymbolBrush(cfg['beat_color'])
     
     def setup_styling(self,style="dark"):
         if style == "light":
